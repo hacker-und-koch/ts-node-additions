@@ -16,10 +16,11 @@
     },
     "license": "MIT",
     "dependencies": {
-        "reflect-metadata": "^0.1.12"
+        "reflect-metadata": "^0.1.13"
     },
     "devDependencies": {
-        "jasmine": "latest",
-        "typescript": "latest"
+        "@types/node": "^13.7.2",
+        "jasmine": "^3.5.0",
+        "typescript": "^3.7.5"
     }
 }
