@@ -1,0 +1,25 @@
+{
+    "name": "@jp/di",
+    "version": "0.0.0",
+    "description": "",
+    "main": "bin/index.js",
+    "types": "declarations/index.js",
+    "scripts": {
+        "start": "node bin/main.js",
+        "build": "tsc",
+        "watch": "tsc --watch",
+        "test": "jasmine"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git://localhost/devtalk/test"
+    },
+    "license": "MIT",
+    "dependencies": {
+        "reflect-metadata": "^0.1.12"
+    },
+    "devDependencies": {
+        "jasmine": "latest",
+        "typescript": "latest"
+    }
+}
