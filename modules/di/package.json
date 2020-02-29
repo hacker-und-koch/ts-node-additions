@@ -1,5 +1,5 @@
 {
-    "name": "@jp/di",
+    "name": "@tna/di",
     "version": "0.0.0",
     "description": "",
     "main": "bin/index.js",
