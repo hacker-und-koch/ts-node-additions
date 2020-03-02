@@ -1,4 +1,12 @@
-import { MissingValueError, UnknownOptionError, NormalizationFailedError, DoublicateOptionError, OptionNotProvidedError } from "./errors";
+import {
+    ArgumentError,
+    DoublicateOptionError,
+    MissingCommandError,
+    MissingValueError,
+    NormalizationFailedError,
+    OptionNotProvidedError,
+    UnknownOptionError,
+} from "./errors";
 import * as util from 'util';
 
 export declare type GetOptValueType = 'string' | 'boolean' | 'array';
@@ -38,31 +46,32 @@ export declare type GetOptOptions = GetOptOption[];
 export interface BasicPositionalArgument {
     name: string;
     info?: string;
+    children?: PositionalTree[];
     required?: boolean;
 }
-export interface SpreadingPositionalArgument extends BasicPositionalArgument {
+export interface SpreadingPositionalArgument extends Omit<BasicPositionalArgument, 'children'> {
     spreads: boolean;
 }
-export interface PositionalCommandArgument extends BasicPositionalArgument {
-    commands: {
-        [command: string]: PositionalTree,
-    };
+export interface PositionalCommandArgument extends Omit<BasicPositionalArgument, 'required'> {
+    command: boolean;
 }
 
 export declare type PositionalTree = SpreadingPositionalArgument | BasicPositionalArgument | PositionalCommandArgument;
 
 export interface GetOptConfiguration {
     options?: GetOptOptions;
-    args?: PositionalTree;
+    args?: PositionalTree[];
     argv?: string[];
     env?: { [key: string]: string };
 }
-
 
 export class GetOpt {
     private configuration: GetOptConfiguration;
 
     private _normalizedArgv: string[] = [];
+    private _positionalTree: any;
+    private _activeCommandChain: string[] = [];
+    private _activeCommandNode: PositionalTree[] = [];
 
     options: GetOptOptionsValues = {};
     positional: GetOptPositionalArguments = Object.assign([], {
@@ -90,30 +99,37 @@ export class GetOpt {
         try {
             this.parseArguments();
         } catch (e) {
-            if (e instanceof OptionNotProvidedError) {
-                if (this.options.help) {
-                    this.printHelp();
-                    process.exit(0);
-                }
+            if (e instanceof OptionNotProvidedError && this.options.help) {
+                // ignore error
             } else {
                 throw e;
             }
         }
 
-        this.handlePositionalArguments();
-    }
-
-    private handlePositionalArguments(offset = 0) {
-
-        for (let i = offset; i < this.positional.length; ++i) {
-            const arg = this.positional[i];
-
-            // TODO: CONTINUE HERE!!
-
-            if (arg) {
-
+        try {
+            this.parsePositionalArguments();
+        } catch (err) {
+            if (err instanceof MissingCommandError) {
+                console.error(err.message);
+                this.printHelp();
+                process.exit(1);
+            } else if (err instanceof ArgumentError) {
+                console.error(err.message);
+                this.printHelp();
+                process.exit(2);
+            } else {
+                throw err;
             }
         }
+
+        if (this.options.help) {
+            this.printHelp();
+            process.exit(0);
+        }
+    }
+
+    get posTree(): any {
+        return this._positionalTree;
     }
 
     private parseArguments() {
@@ -255,35 +271,85 @@ export class GetOpt {
             }, '');
     }
 
+    private parsePositionalArguments() {
+        const out: any = {};
+        const posArgs = [...this.positional];
+
+        let node: PositionalTree[] = [...this.configuration.args];
+        this._activeCommandNode = node;
+
+        const collector = { collector: out };
+        let valNode: any = collector;
+        let valKey: string = 'collector';
+
+        if (node && node.length) {
+            let arg = null;
+            let tree: PositionalTree;
+
+            let discontinue = false;
+            while ((arg = posArgs.shift()) && !discontinue) {
+                while (tree = node.shift()) {
+                    const treeIsCommand = (tree as PositionalCommandArgument).command;
+                    if (treeIsCommand && tree.name === arg) {
+
+                        valNode[valKey][tree.name] = {};
+                        valNode = valNode[valKey];
+                        valKey = tree.name;
+                        node = [...(tree as PositionalCommandArgument).children];
+
+                        this._activeCommandChain.push(tree.name);
+                        this._activeCommandNode = [...node];
+                        break;
+                    } else if ((tree as SpreadingPositionalArgument).spreads) {
+                        if (Array.isArray(valNode[valKey])) {
+                            valNode[valKey].push(arg);
+                        } else {
+                            valNode[valKey][tree.name] = [arg];
+
+                            valNode = valNode[valKey];
+                            valKey = tree.name;
+
+                        }
+                        node = [tree];
+
+                        break;
+                    } else if (!treeIsCommand) {
+                        Object.assign(valNode[valKey], { [tree.name]: arg });
+                        break;
+                    }
+
+                    discontinue = !treeIsCommand;
+                }
+
+                if (typeof tree === 'undefined') {
+                    throw new ArgumentError('Unhandled arguments detected: ' + arg);
+                }
+            }
+        }
+
+        return this._positionalTree = out;
+    }
+
     private positionalHelp(): string {
         return '';
     }
     private commandHelp(): string {
         let out = this.positional.$1;
-        const posArgs = this.positional;
-        let tree = this.configuration.args;
-        let round = 0;
 
-        while (tree && round < posArgs.length) {
-            const posArg = posArgs[round];
-            // const matchingArg = ((tree as PositionalCommandArgument).children || []).find(entry => entry.name === posArg);
-
-            const commands = (tree as PositionalCommandArgument).commands;
-            if (commands && posArg in commands) {
-                out += ` ${posArg}`;
-                tree = commands[posArg];
-            } else {
-                const spreadChars = (tree as SpreadingPositionalArgument).spreads ? '...' : '';
-
-                if (tree.required) {
-                    out += ` <${spreadChars}${tree.name}>`;
-                } else {
-                    out += ` [${spreadChars}${tree.name}]`;
-                }
-                tree = null;
-            }
-            round++;
+        for (let command of this._activeCommandChain) {
+            out += ` ${command}`;
         }
+
+        for (let arg of this._activeCommandNode) {
+            const spreadChars = (arg as SpreadingPositionalArgument).spreads ? '...' : '';
+
+            if ((arg as BasicPositionalArgument).required) {
+                out += ` <${spreadChars}${arg.name}>`;
+            } else {
+                out += ` [${spreadChars}${arg.name}]`;
+            }
+        }
+
 
         out += ` [...options]`;
         return out;
