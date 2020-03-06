@@ -1,0 +1,8 @@
+{
+    "spec_dir": "bin/",
+    "random": false,
+
+    "spec_files": [
+      "**/*[sS]pec.js"
+    ]
+  }
