@@ -6,6 +6,7 @@
   "workspaces": [
     "modules/getopt",
     "modules/logger",
+    "modules/util",
     "modules/di"
   ]
 }
