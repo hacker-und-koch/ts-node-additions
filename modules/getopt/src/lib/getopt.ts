@@ -97,10 +97,10 @@ export class GetOpt {
         ];
 
         try {
-            this.parseArguments();
+            this.parseOptions();
         } catch (e) {
             if (e instanceof OptionNotProvidedError && this.options.help) {
-                // ignore error
+                // ignore this error. help is on the way.
             } else {
                 throw e;
             }
@@ -110,13 +110,21 @@ export class GetOpt {
             this.parsePositionalArguments();
         } catch (err) {
             if (err instanceof MissingCommandError) {
-                console.error(err.message);
-                this.printHelp();
-                process.exit(1);
+                if (this.options.help) {
+                    // ignore this error. help is on the way.
+                } else {
+                    console.error(err.message);
+                    this.printHelp();
+                    process.exit(1);
+                }
             } else if (err instanceof ArgumentError) {
-                console.error(err.message);
-                this.printHelp();
-                process.exit(2);
+                if (this.options.help) {
+                    // ignore this error. help is on the way.
+                } else {
+                    console.error(err.message);
+                    this.printHelp();
+                    process.exit(2);
+                }
             } else {
                 throw err;
             }
@@ -132,7 +140,7 @@ export class GetOpt {
         return this._positionalTree;
     }
 
-    private parseArguments() {
+    private parseOptions() {
         const options = this.configuration.options;
         let argv = [...(this.configuration.argv || process.argv)];
 
@@ -213,10 +221,11 @@ export class GetOpt {
         const optionsPart = this.optionsHelp();
 
         console.error(
-            `usage: ${commandHelp}\n\n` +
-            `arguments:\n` +
-            `${positionalHelp}` +
-            `options:\n` +
+            `USAGE\n` +
+            `  ${commandHelp}\n\n` +
+            `ARGUMENTS\n` +
+            `${positionalHelp}\n` +
+            `OPTIONS\n` +
             `${optionsPart}`
         );
     }
@@ -276,7 +285,7 @@ export class GetOpt {
         const posArgs = [...this.positional];
 
         let node: PositionalTree[] = [...this.configuration.args];
-        this._activeCommandNode = node;
+        this._activeCommandNode = [...node];
 
         const collector = { collector: out };
         let valNode: any = collector;
@@ -331,7 +340,25 @@ export class GetOpt {
     }
 
     private positionalHelp(): string {
-        return '';
+        let out = '';
+        const longestName = this._activeCommandNode
+            .reduce((acc, node) =>
+                node.name.length > acc ? node.name.length : acc,
+                0);
+
+        // dirty way to get command handling
+        const handleAsCommand = (this._activeCommandNode[0] as PositionalCommandArgument).command;
+        if (handleAsCommand) {
+            out += `  command -> choose from:\n`;
+        }
+        for (let node of this._activeCommandNode) {
+            if (handleAsCommand) {
+                out += `    * ${(node.name + ' ').padEnd(longestName + 2, '.')} ${node.info}\n`;
+            } else {
+                out += `  ${node.name.padEnd(longestName)} -> ${node.info}\n`;
+            }
+        }
+        return out;
     }
     private commandHelp(): string {
         let out = this.positional.$1;
@@ -340,13 +367,18 @@ export class GetOpt {
             out += ` ${command}`;
         }
 
-        for (let arg of this._activeCommandNode) {
-            const spreadChars = (arg as SpreadingPositionalArgument).spreads ? '...' : '';
-
-            if ((arg as BasicPositionalArgument).required) {
-                out += ` <${spreadChars}${arg.name}>`;
-            } else {
-                out += ` [${spreadChars}${arg.name}]`;
+        // dirty way to get command handling
+        if ((this._activeCommandNode[0] as PositionalCommandArgument).command) {
+            out += ` <command>`; 
+        } else {
+            for (let arg of this._activeCommandNode) {
+                const spreadChars = (arg as SpreadingPositionalArgument).spreads ? '...' : '';
+    
+                if ((arg as BasicPositionalArgument).required) {
+                    out += ` <${spreadChars}${arg.name}>`;
+                } else {
+                    out += ` [${spreadChars}${arg.name}]`;
+                }
             }
         }
 
