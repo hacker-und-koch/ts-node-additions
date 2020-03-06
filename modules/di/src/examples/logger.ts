@@ -1,4 +1,4 @@
-import { Injectable, bootstrap, Application, Inject, OnReady } from './lib';
+import { Injectable, bootstrap, Application, Inject, OnReady } from '../lib';
 import { Logger } from '@tna/logger';
 
 @Injectable()
@@ -34,7 +34,6 @@ class App implements OnReady {
         this.worker1.doSome();
         this.worker2.doSome();
     }
-
 }
 
 bootstrap(App, {
