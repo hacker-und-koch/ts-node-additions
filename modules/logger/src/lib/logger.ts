@@ -100,7 +100,7 @@ class LoggerBuilder {
     private _format: FormatFunction;
     private _stdout: NodeJS.WriteStream;
     private _stderr: NodeJS.WriteStream;
-    private _noTimestamp: boolean; 
+    private _noTimestamp: boolean;
 
     id(id: string): this {
         if (typeof this._id !== "undefined") {
@@ -165,30 +165,62 @@ class LoggerBuilder {
             throw new Error('Cannot create Logger with noTimestap() AND onlog() called.');
         }
 
+        if (!this._stdout) {
+            this._stdout = process.stdout;
+        }
+        if (!this._stderr) {
+            this._stderr = process.stderr;
+        }
+
         const logger = new Logger(this._className, this._id);
 
-        logger['format'] = this._format || this.defaultFormat();
+        logger['stdout'] = this._stdout;
+        logger['stderr'] = this._stderr;
 
-        if (this._stdout) {
-            logger['stdout'] = this._stdout;
-        }
-        if (this._stderr) {
-            logger['stderr'] = this._stderr;
-        }
+        logger['format'] = this._format || this.defaultFormat();
 
         return logger;
     }
 
     private defaultFormat(): FormatFunction {
         return (pkg: LoggerPackage) => {
+            let windowX = -1;
+            try {
+                windowX = this._stdout.getWindowSize()[0];
+            } catch (e) {
+                // ignore, since we can just print everything into one line.
+            }
+
             const rawOutput = (utilFormat as any)(...pkg.parts);
 
             return rawOutput.split('\n')
                 .map((line: string): string => {
                     const lvlPart = this.defaultLevelToChars(pkg.level);
                     const idPart = pkg.id ? `[${pkg.id}]` : '';
-                    const timePart = this._noTimestamp ? '' : this.defaultTimestamp() + ' <> ';
-                    return `${timePart}${pkg.class}${idPart}${lvlPart}${line}\n`;
+                    const timePart = this._noTimestamp ? '' : this.defaultTimestamp();
+                    const timeUntilClass = `${timePart}${lvlPart}${pkg.class}${idPart}: `;
+                    let formatedLine = line + '\n';
+                    if (windowX > 0) {
+                        const maxTextWidth = windowX - timeUntilClass.length;
+                        const lines = [];
+                        for (let segment of line.split(' ')) {
+                            let idx = lines.length - 1;
+                            if (idx < 0) {
+                                lines.push(segment);
+                            } else if ((lines[idx].length + segment.length + 1) > maxTextWidth) {
+                                lines.push(segment);
+                            } else {
+                                lines[idx] += ` ${segment}`;
+                            }
+                        }
+                        formatedLine = lines.reduce((acc, cur, idx) => {
+                            if (idx > 0) {
+                                cur = cur.padStart(timeUntilClass.length + cur.length);
+                            }
+                            return `${acc}${cur}\n`;
+                        }, '');
+                    }
+                    return `${timeUntilClass}${formatedLine}`;
                 })
                 .join('');
         }
