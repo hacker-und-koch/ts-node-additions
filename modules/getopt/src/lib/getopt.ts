@@ -81,7 +81,7 @@ export class GetOpt {
 
     constructor(configuration: GetOptConfiguration) {
         this.configuration = Object.assign({
-            args: null,
+            args: [],
             options: [],
             argv: process.argv,
             env: process.env
@@ -95,6 +95,14 @@ export class GetOpt {
                 info: 'Print command info.'
             }
         ];
+        this.init();
+    }
+
+    option(name: string) {
+        return this.options[name];
+    }
+
+    private init() {
 
         try {
             this.parseOptions();
