@@ -9,6 +9,8 @@ import {
 } from "./errors";
 import * as util from 'util';
 
+import { parse as parsePath } from 'path';
+
 export declare type GetOptValueType = 'string' | 'boolean' | 'array';
 export declare type GetOptOptionsValue = string | boolean | string[];
 
@@ -369,7 +371,7 @@ export class GetOpt {
         return out;
     }
     private commandHelp(): string {
-        let out = this.positional.$1;
+        let out = parsePath(this.positional.$1).base;
 
         for (let command of this._activeCommandChain) {
             out += ` ${command}`;
@@ -377,11 +379,11 @@ export class GetOpt {
 
         // dirty way to get command handling
         if ((this._activeCommandNode[0] as PositionalCommandArgument).command) {
-            out += ` <command>`; 
+            out += ` <command>`;
         } else {
             for (let arg of this._activeCommandNode) {
                 const spreadChars = (arg as SpreadingPositionalArgument).spreads ? '...' : '';
-    
+
                 if ((arg as BasicPositionalArgument).required) {
                     out += ` <${spreadChars}${arg.name}>`;
                 } else {
