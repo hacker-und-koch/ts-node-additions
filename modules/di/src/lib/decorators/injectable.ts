@@ -27,7 +27,7 @@ export function Injectable(options?: InjectableOptions) {
         constructor.__tna_di_provides__ = options.injectAs || constructor.name;
         constructor.__tna_di_consumes__ = getConstructorArgs(constructor);
         constructor.__tna_di_declarations__ = options.declarations;
-
+        constructor.__tna_di_getopt_commandStates__ = [];
 
         return constructor as IInjectable;
     } as (constr: any) => any;
