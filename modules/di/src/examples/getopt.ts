@@ -2,7 +2,8 @@ import {
     Application,
     bootstrap,
     Option,
-    Argument
+    Argument,
+    CommandState,
 } from '../lib';
 import { GetOpt } from '@tna/getopt';
 
@@ -22,8 +23,8 @@ import { GetOpt } from '@tna/getopt';
             info: 'example command argument',
             children: [
                 {
-                    name: 'child',
-                    info: 'child argument'
+                    name: 'entity',
+                    info: 'entity to greet',
                 },
             ]
         }]
@@ -32,29 +33,35 @@ import { GetOpt } from '@tna/getopt';
 class App {
 
     @Option("greeting")
-    private foo: string;
+    private greeting: string;
 
-    @Argument('greet.child')
-    private bar: string;
+    @Argument('greet.entity', 'world')
+    private entity: string;
+
+    @CommandState('greet')
+    private performGreeting: boolean;
 
     constructor(private getopt: GetOpt) {
-
+        console.log(`During construction >> greeting: ${this.greeting}; entity: ${this.entity}`);
+        // console.log(`(Direct access is already possible: ${JSON.stringify(getopt.options)})`);
     }
 
     onConfigure() {
-        console.log(this.foo, this.bar);
+        console.log(`During configuration >> greeting: ${this.greeting}; entity: ${this.entity}`);
     }
 
     onReady() {
-        if (this.foo === 'hello') {
-            console.log("Try --greeting <word> for more demo. Or --help for further information.");
-        } 
+        if (this.performGreeting) {
+            console.log(`${this.greeting} ${this.entity}!`);
+            if (this.greeting === 'hello') {
+                console.log('Try --greeting <word> for more demo.');
+            }
+        } else {
+            console.log('Use --help to get more information.');
+        }
     }
 }
 
-// console.log(App);
-// console.log(Worker);
-
 bootstrap(App, {
-    log: "spam",
+    log: 'log'
 });
