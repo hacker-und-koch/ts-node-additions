@@ -2,6 +2,7 @@ import { Logger } from './index'
 
 const logger: Logger = Logger.build()
     .className('main')
+    .level('spam')
     .create();
 
 logger.spam('first');

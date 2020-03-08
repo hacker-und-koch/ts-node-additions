@@ -5,8 +5,8 @@
     "main": "bin/index.js",
     "types": "declarations/index.js",
     "scripts": {
-        "start": "node bin/main.js",
-        "start:watch": "npx nodemon --exec node bin/main.js",
+        "start": "node bin/example.js",
+        "start:watch": "npx nodemon --exec node bin/example.js",
         "build": "tsc",
         "build:watch": "tsc --watch",
         "test": "jasmine",

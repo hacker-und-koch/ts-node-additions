@@ -15,13 +15,12 @@ import { EOL } from 'os';
 
 export class Logger {
 
-    private options: LoggerOptions = {
-        level: "spam",
-    };
     private logLevels: Loglevel[] = ['spam', 'info', 'log', 'warn', 'error'];
 
     private stdout: NodeJS.WriteStream = process.stdout;
     private stderr: NodeJS.WriteStream = process.stderr;
+
+    private activeLogLevel: Loglevel = 'spam';
 
     constructor(public className: string, private id?: string) {
 
@@ -33,7 +32,7 @@ export class Logger {
 
     private onlog(loggerPackage: LoggerPackage): boolean {
         const idxPackage = this.logLevels.indexOf(loggerPackage.level);
-        const idxOptions = this.logLevels.indexOf(this.options.level);
+        const idxOptions = this.logLevels.indexOf(this.activeLogLevel);
 
         if (idxPackage >= idxOptions) {
             const stream = loggerPackage.level === "error" ? this.stderr : this.stdout;
@@ -97,6 +96,7 @@ export class Logger {
 class LoggerBuilder {
     private _className: string;
     private _id: string;
+    private _level: Loglevel;
     private _format: FormatFunction;
     private _stdout: NodeJS.WriteStream;
     private _stderr: NodeJS.WriteStream;
@@ -116,6 +116,15 @@ class LoggerBuilder {
             throw new Error("'className' already set for Logger.")
         }
         this._className = className;
+
+        return this;
+    }
+
+    level(level: Loglevel): this {
+        if (typeof this._level !== "undefined") {
+            throw new Error("'level' already set for Logger.")
+        }
+        this._level = level;
 
         return this;
     }
@@ -178,6 +187,8 @@ class LoggerBuilder {
         logger['stderr'] = this._stderr;
 
         logger['format'] = this._format || this.defaultFormat();
+
+        logger['activeLogLevel'] = this._level || 'spam';
 
         return logger;
     }
