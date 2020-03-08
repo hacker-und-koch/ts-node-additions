@@ -6,7 +6,6 @@ export interface BootstrapOptions {
     log?: Loglevel | { [className: string]: Loglevel };
     getoptOptions?: GetOptConfiguration[];
     providers?: Providers;
-    logFilter?: RegExp;
 }
 
 export async function bootstrap(target: any): Promise<Providers>;
@@ -14,11 +13,11 @@ export async function bootstrap(target: any, options: BootstrapOptions): Promise
 export async function bootstrap(target: any, options?: BootstrapOptions): Promise<Providers> {
     options = options || { log: "spam" };
 
-    // const consoleLogger = new Logger(options.log);
+    const formatedLogLevelOption = Providers.formatLogLevels(options.log);
     const di_logger: Logger = Logger.build()
-        .className("bootstrap()")
+        .className("bootstrap")
+        .level(Providers.logLevelIn('bootstrap', formatedLogLevelOption))
         .create();
-    // consoleLogger.registerLogger(di_logger);
 
     di_logger.info(`Target: "${target.name}".`);
 
@@ -27,10 +26,12 @@ export async function bootstrap(target: any, options?: BootstrapOptions): Promis
     }
 
     if (options.providers) {
-        di_logger.info(`Reusing providers.`);
+        di_logger.info(`Reusing Providers.`);
     }
 
-    const providers = options.providers || new Providers({ });
+    const providers = options.providers || new Providers({
+        loglevels: formatedLogLevelOption
+     });
 
     providers.createGetOpt({
         ...(target.__tna_di_options__ || {})
@@ -40,7 +41,7 @@ export async function bootstrap(target: any, options?: BootstrapOptions): Promis
 
     providers.register(target);
     try {
-        providers.gimme<typeof target>(target, "bootstrap()");
+        providers.gimme<typeof target>(target, "bootstrap");
     } catch(e) {
         di_logger.error(e.message);
         di_logger.info(e);

@@ -3,10 +3,10 @@ import { ConfigurationProvider, Configuration } from './configurations';
 import { OnConfigure, OnInit, OnReady, OnDestroy } from './hooks';
 import { BootstrapPhaseError, MissingDeclarationError, MissingConfigurationError, UnspecificConfigError } from '../errors';
 import { IInjectable, IApplication } from './hooks/injectable';
-import { Logger } from '@tna/logger';
+import { Logger, Loglevel } from '@tna/logger';
 
 export interface ProviderOptions {
-    // logger?: ConsoleLogger;
+    loglevels?: { [classIdentifier: string]: Loglevel };
     configurations?: Configuration<any>[];
 }
 
@@ -40,23 +40,27 @@ export class Providers {
     private instances: InstancePackage<any>[] = [];
     private templates: TemplatePackage[] = [];
     private getopt: GetOpt;
-    private configurations: Configuration<any>[] = [];
-    private logger = Logger.build()
-        .className('Providers')
-        .create();
+    private logger: Logger;
 
     constructor(private options?: ProviderOptions) {
-        this.options = Object.assign({
-            logger: null,
-            options: [],
-            configurations: [],
-        } as ProviderOptions, options);
+        this.options = {
+            ...{
+                options: [],
+                configurations: [],
+            } as ProviderOptions,
+            ...options,
+            ...{
+                loglevels: Providers.formatLogLevels(options.loglevels),
+            }
+        };
 
-        // if (!this.options.logger) {
-        //     this.options.logger = new ConsoleLogger("spam");
-        // }
+        const ownLogClassName = 'Providers';
+        const ownLogLevel = this.logLevelOf(ownLogClassName);
 
-        this.configurations = this.options.configurations;
+        this.logger = Logger.build()
+            .className(ownLogClassName)
+            .level(ownLogLevel)
+            .create();
 
         this.instances.push({
             consumes: [],
@@ -65,10 +69,6 @@ export class Providers {
             instance: this,
             provides: "Providers"
         });
-
-        // if (options.logger) {
-        //     options.logger.registerLogger(this.logger);
-        // }
     }
 
     createGetOpt(options: GetOptConfiguration) {
@@ -136,11 +136,33 @@ export class Providers {
                     this.logger.spam(`setting key "${option.target}" on "${instance.provides}" from getopt argument "${option.getOptKey}"`);
                     let keySplit = option.getOptKey.split('.');
                     let value = this.getopt.posTree[keySplit.shift()];
-                    
+
                     for (let arg of keySplit) {
-                        value = value[arg];
+                        if (typeof value !== 'undefined' && typeof value[arg] !== 'undefined') {
+                            value = value[arg];
+                        } else if (typeof option.defaultVal !== 'undefined') {
+                            value = Array.isArray(option.defaultVal) ? [...option.defaultVal] : option.defaultVal;
+                            break;
+                        }
                     }
                     (instance.instance as any)[option.target] = value;
+                }
+            }
+            if (instance.instance.__tna_di_getopt_commandStates__) {
+                for (let option of instance.instance.__tna_di_getopt_commandStates__) {
+                    this.logger.spam(`setting key "${option.target}" on "${instance.provides}" from getopt command state "${option.getOptKey}"`);
+                    let keySplit = option.getOptKey.split('.');
+                    let value = this.getopt.posTree[keySplit.shift()];
+
+                    for (let arg of keySplit) {
+                        if (typeof value !== 'undefined' && typeof value[arg] !== 'undefined') {
+                            value = value[arg];
+                        } else {
+                            value = false;
+                            break;
+                        }
+                    }
+                    (instance.instance as any)[option.target] = typeof value !== "undefined";
                 }
             }
         }
@@ -167,7 +189,7 @@ export class Providers {
         }
 
 
-        const matching_conf = this.configurations
+        const matching_conf = this.options.configurations
             .find(conf =>
                 conf.forModule == instance.provides
                 && conf.id == instance.id
@@ -193,13 +215,10 @@ export class Providers {
                 (instance.instance as any)[conf_key_package.propertyKey] || {},
                 matching_conf && matching_conf.config || {}
             );
-
         }
 
 
         if (typeof instance.instance.onConfigure == "function") {
-
-
             this.logger.spam(`Starting to configure "${instance.provides}${instance.id ? '" with id "' + instance.id : ''}".`);
 
             await instance.instance.onConfigure.apply(instance.instance);
@@ -221,8 +240,8 @@ export class Providers {
                 }
             }
 
-            this.configurations = [
-                ...this.configurations,
+            this.options.configurations = [
+                ...this.options.configurations,
                 ...configs
             ];
         }
@@ -261,24 +280,15 @@ export class Providers {
     announceReady() {
         this.logger.info(`Announcing ready state to ${this.instances.length} instances.`);
 
-
         for (let instance of this.instances as InstancePackage<OnReady>[]) {
             if (instance.initState !== "initialized") {
                 throw new BootstrapPhaseError(`Trying to announce ready state to "${instance.provides}"${instance.id ? ' with id "' + instance.id + '"' : ''} although it is not initialized yet.`);
             }
 
-            // if (this.options.log) {
-            //     console.log(`DI: ... announcing ready to "${instance.provides}"${instance.id ? ' with id "' + instance.id + '"' : ''} ...`);
-            // }
-
             if (typeof instance.instance.onReady == "function") {
                 instance.instance.onReady();
             }
             instance.initState = "ready";
-
-            // if (this.options.log) {
-            //     console.log(`DI: ... "${instance.provides}"${instance.id ? ' with id "' + instance.id + '"' : ''} is ready ...`);
-            // }
         }
     }
 
@@ -317,7 +327,6 @@ export class Providers {
     gimme<T>(instance: string | any, caller: string, id?: string, callerId?: string): T {
         const instance_name = typeof instance === "string" ? instance : instance.name;
 
-
         this.logger.spam(`"${caller}" requests "${instance_name}"${id ? ' with id "' + id + '"' : ""}.`);
 
         // pseudo-inject new logger if needed
@@ -325,8 +334,9 @@ export class Providers {
             const logger = Logger.build()
                 .className(caller)
                 .id(callerId)
+                .level(this.logLevelOf(caller))
                 .create();
-            // this.options.logger.registerLogger(logger);
+
             return logger as any;
         }
 
@@ -428,7 +438,7 @@ export class Providers {
 
     registerConfigs(configs: Configuration<any>[]) {
         for (let config of configs) {
-            const previous_config = this.configurations
+            const previous_config = this.options.configurations
                 .find(conf =>
                     conf.forModule == config.forModule
                     && conf.id == config.id
@@ -438,12 +448,38 @@ export class Providers {
                 throw new UnspecificConfigError(`Configuration for "${config.forModule}"${config.id ? ' with id "' + config.id + '"' : ""} is already present`);
             }
 
-            this.configurations.push(config);
-
+            this.options.configurations.push(config);
         }
     }
 
     createInstance(target: any, args: any[]) {
         return new target(...args);
+    }
+
+    static formatLogLevels(input: Loglevel | { [className: string]: Loglevel }): { [classIdentifier: string]: Loglevel } {
+        if (typeof input === 'string') {
+            return {
+                '*': input,
+            };
+        }
+        const output = {
+            '*': 'spam',
+            ...input,
+        } as { [classIdentifier: string]: Loglevel };
+
+        return output;
+    }
+
+    static logLevelIn(identifier: string, levels: { [identifier: string]: Loglevel }): Loglevel {
+        if (identifier in levels) {
+            return levels[identifier];
+        } else {
+            return levels['*'];
+        }
+
+    }
+
+    private logLevelOf(classIdentifier: string): Loglevel {
+        return Providers.logLevelIn(classIdentifier, this.options.loglevels);
     }
 }

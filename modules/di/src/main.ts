@@ -4,10 +4,10 @@ import { Logger } from '@tna/logger';
 @Injectable()
 class Worker {
     constructor(private logger: Logger) {
-        this.logger.info("alive");
+        this.logger.spam("alive");
     }
     doSome() {
-        this.logger.log(`doing something`);
+        this.logger.info(`doing something`);
     }
 }
 
@@ -25,19 +25,26 @@ class App implements OnReady {
     private worker2: Worker;
 
     constructor(private logger: Logger) {
-        this.logger.info("alive");
+        this.logger.spam("alive");
     }
 
     onReady() {
-        this.logger.log("ready");
-
         this.worker1.doSome();
         this.worker2.doSome();
+
+        this.logger.log("ready");
     }
 
 }
 
 bootstrap(App, {
-    log: "spam"
+    log: {
+        '*': 'log',
+        Worker: 'info'
+    },
 });
 
+// replace with above bootstrap(...) for more demo
+// bootstrap(App, {
+//     log: "spam"
+// });

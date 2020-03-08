@@ -6,20 +6,24 @@ export declare class IInjectable {
     __tna_di_consumes__?: string[];
     __tna_di_decorated__?: boolean;
     __tna_di_declarations__?: any[];
-    
+
     __tna_di_getopt_options__?: {
         getOptKey: string;
         target: string;
     }[];
-    
+
     __tna_di_getopt_arguments__?: {
         getOptKey: string;
         target: string;
+        defaultVal: string | string[];
     }[];
-    
+    __tna_di_getopt_commandStates__?: {
+        getOptKey: string;
+        target: string;
+    }[];
     __tna_di_config_id_map__?: {
         [key: string]: string;
-    }
+    };
 }
 
 export declare class IApplication extends IInjectable {
