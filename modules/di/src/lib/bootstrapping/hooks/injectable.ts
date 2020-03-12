@@ -10,6 +10,7 @@ export declare class IInjectable {
     __tna_di_getopt_options__?: {
         getOptKey: string;
         target: string;
+        defaultVal: string | string[];
     }[];
 
     __tna_di_getopt_arguments__?: {

@@ -28,11 +28,11 @@ export class StepTester<T> {
             // logger: new ConsoleLogger(options.loglevel || "warn")
         });
 
-        this.providers.register(target);
+        this.providers.register(target, 'StepTester');
 
         if (options.declarations.length) {
             for (let declaration of options.declarations) {
-                this.providers.register(declaration);
+                this.providers.register(declaration, 'StepTester');
             }
         }
 
