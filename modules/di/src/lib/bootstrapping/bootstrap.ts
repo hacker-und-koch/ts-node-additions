@@ -1,6 +1,6 @@
-import { Providers } from "./providers";
-import { GetOptConfiguration } from "@tna/getopt";
-import { Logger, Loglevel } from "@tna/logger";
+import { Providers } from './providers';
+import { GetOptConfiguration } from '@tna/getopt';
+import { Logger, Loglevel } from '@tna/logger';
 
 export interface BootstrapOptions {
     log?: Loglevel | { [className: string]: Loglevel };
@@ -11,15 +11,15 @@ export interface BootstrapOptions {
 export async function bootstrap(target: any): Promise<Providers>;
 export async function bootstrap(target: any, options: BootstrapOptions): Promise<Providers>;
 export async function bootstrap(target: any, options?: BootstrapOptions): Promise<Providers> {
-    options = options || { log: "spam" };
+    options = options || { log: 'spam' };
 
     const formatedLogLevelOption = Providers.formatLogLevels(options.log);
     const di_logger: Logger = Logger.build()
-        .className("bootstrap")
+        .className('bootstrap')
         .level(Providers.logLevelIn('bootstrap', formatedLogLevelOption))
         .create();
 
-    di_logger.info(`Target: "${target.name}".`);
+    di_logger.info(`Target: ${target.name}`);
 
     if (options.providers && !(options.providers instanceof Providers)) {
         throw new Error(`'providers' option is not an instance of Providers!`);
@@ -39,9 +39,10 @@ export async function bootstrap(target: any, options?: BootstrapOptions): Promis
 
     providers.setupShutdownHook();
 
-    providers.register(target);
+    providers.register(target, 'bootstrap');
+
     try {
-        providers.gimme<typeof target>(target, "bootstrap");
+        providers.gimme<typeof target>(target, 'bootstrap');
     } catch(e) {
         di_logger.error(e.message);
         di_logger.info(e);

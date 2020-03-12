@@ -15,17 +15,18 @@ export interface TemplatePackage {
     provides: string;
     constructorArgs: string[];
     multiIds: { token: string, id: string }[];
+    declaredBy: string;
 }
 
 export declare type HookState =
-    "unset"
-    | "configuring"
-    | "configured"
-    | "initializing"
-    | "initialized"
-    | "ready"
-    | "destroying"
-    | "destroyed";
+    'unset'
+    | 'configuring'
+    | 'configured'
+    | 'initializing'
+    | 'initialized'
+    | 'ready'
+    | 'destroying'
+    | 'destroyed';
 
 export interface InstancePackage<T> {
     provides: string;
@@ -65,9 +66,9 @@ export class Providers {
         this.instances.push({
             consumes: [],
             id: null,
-            initState: "unset",
+            initState: 'unset',
             instance: this,
-            provides: "Providers"
+            provides: 'Providers'
         });
     }
 
@@ -78,62 +79,91 @@ export class Providers {
         this.instances.push({
             consumes: [],
             id: null,
-            initState: "unset",
+            initState: 'unset',
             instance: getopt,
-            provides: "GetOpt"
+            provides: 'GetOpt'
         });
     }
 
     async setupShutdownHook() {
         let shutting_down = false;
 
-        // process.on("beforeExit", callShutdown);
-        process.removeAllListeners("SIGTERM");
-        process.on("SIGTERM", () => {
-            this.logger.info("SIGTERM");
+        // keeps terminal session active
+        if ('resume' in process.stdin) {
+            process.stdin.resume();
+        }
+
+        process.once('SIGTERM', () => {
+            this.logger.info('SIGTERM');
             callShutdown();
         });
-        process.removeAllListeners("SIGINT");
-        process.on("SIGINT", () => {
-            this.logger.info("SIGINT");
+        // process.removeAllListeners('SIGINT');
+        process.once('SIGINT', () => {
+            this.logger.info('SIGINT');
             callShutdown();
         });
 
+        // catches "kill pid" (for example: nodemon restart)
+        process.on('SIGUSR1', () => {
+            this.logger.info('SIGUSR1');
+            callShutdown();
+        });
+        process.on('SIGUSR2', () => {
+            this.logger.info('SIGUSR2');
+            callShutdown();
+        });
 
+        //catches uncaught exceptions
+        process.on('uncaughtException', (err) => {
+            this.logger.error(err);
+            this.logger.warn('Shutting down because of error.')
+            callShutdown(1);
+        });
         const self = this;
 
-        function callShutdown() {
+        function callShutdown(code = 0) {
 
             if (shutting_down) {
-                self.logger.warn(`Ignoring shutdown call! Already shutting down.`);
+                self.logger.warn(`Ignoring shutdown call! Already shutting down`);
                 return;
             }
 
             shutting_down = true;
 
             self.destroyInstances()
-                .then(_ => {
-                    self.logger.info(`exiting`);
-                    process.exit(0);
+                .then(errors => {
+                    if (errors.length < 1) {
+                        self.logger.info(`Exiting gracefully`);
+                    } else {
+                        self.logger.info(`Exiting with errors`);
+                    }
+                    process.exit(code);
                 });
         }
     }
 
     async configureInstances() {
-        this.logger.info(`Configuring ${this.instances.length} instances.`);
+        this.logger.info(`Configuring ${this.instances.length} instances`);
 
         // set all getopt options before collecting configs
         for (const instance of this.instances as InstancePackage<OnConfigure>[]) {
             if (instance.instance.__tna_di_getopt_options__) {
                 for (let option of instance.instance.__tna_di_getopt_options__) {
-                    this.logger.spam(`setting key "${option.target}" on "${instance.provides}" from getopt option "${option.getOptKey}"`);
-                    const value = this.getopt.options[option.getOptKey];
+
+                    let value: unknown = undefined;
+                    if (option.getOptKey in this.getopt.options) {
+                        value = this.getopt.options[option.getOptKey];
+                    } else if ('defaultVal' in option) {
+                        value = option.defaultVal;
+                    }
+
+                    this.logger.spam(`Setting key '${option.target}' on ${instance.provides} to ${value} from getopt option '${option.getOptKey}'`);
                     (instance.instance as any)[option.target] = value;
                 }
             }
             if (instance.instance.__tna_di_getopt_arguments__) {
                 for (let option of instance.instance.__tna_di_getopt_arguments__) {
-                    this.logger.spam(`setting key "${option.target}" on "${instance.provides}" from getopt argument "${option.getOptKey}"`);
+                    this.logger.spam(`setting key '${option.target}' on ${instance.provides} from getopt argument '${option.getOptKey}'`);
                     let keySplit = option.getOptKey.split('.');
                     let value = this.getopt.posTree[keySplit.shift()];
 
@@ -150,7 +180,7 @@ export class Providers {
             }
             if (instance.instance.__tna_di_getopt_commandStates__) {
                 for (let option of instance.instance.__tna_di_getopt_commandStates__) {
-                    this.logger.spam(`setting key "${option.target}" on "${instance.provides}" from getopt command state "${option.getOptKey}"`);
+                    this.logger.spam(`setting key '${option.target}' on ${instance.provides} from getopt command state '${option.getOptKey}'`);
                     let keySplit = option.getOptKey.split('.');
                     let value = this.getopt.posTree[keySplit.shift()];
 
@@ -162,17 +192,17 @@ export class Providers {
                             break;
                         }
                     }
-                    (instance.instance as any)[option.target] = typeof value !== "undefined";
+                    (instance.instance as any)[option.target] = typeof value !== 'undefined';
                 }
             }
         }
 
-        // reverse instances to configure from "outside" to "inside"
+        // reverse instances to configure from 'outside' to 'inside'
         const reversed_instances = [...this.instances].reverse();
 
         await this.applyConfigurations(reversed_instances);
 
-        this.logger.info(`Done configuring.`);
+        this.logger.info(`Done configuring`);
     }
 
     private async applyConfigurations(instances: InstancePackage<OnConfigure & ConfigurationProvider & IInjectable>[]): Promise<void> {
@@ -184,51 +214,49 @@ export class Providers {
     }
 
     private async applyConfiguration(instance: InstancePackage<OnConfigure & ConfigurationProvider & IInjectable>): Promise<void> {
-        if (instance.initState !== "unset") {
-            throw new BootstrapPhaseError(`Trying to configure "${instance.provides}${instance.id ? '" with id "' + instance.id : ''}" which has already been touched.`);
+        if (instance.initState !== 'unset') {
+            throw new BootstrapPhaseError(`Trying to configure ${instance.provides}${instance.id ? '[' + instance.id : ']'} which has already been touched`);
         }
 
 
         const matching_conf = this.options.configurations
             .find(conf =>
-                conf.forModule == instance.provides
-                && conf.id == instance.id
+                conf.forModule === instance.provides
+                && conf.id === instance.id
             );
-
         const conf_key_package = instance.instance.__tna_di_configuration_key__;
 
         if (conf_key_package && !matching_conf && !conf_key_package.defaultConfiguration) {
 
-            const err_text = `"${instance.provides}" ` +
-                (instance.id ? 'with id "' + instance.id + '" ' : "") +
-                "requests configuration, but none is present!";
+            const err_text = `${instance.provides}` +
+                (instance.id ? '[' + instance.id + ']' : '') +
+                ' requires configuration, but none is present!';
 
             throw new MissingConfigurationError(err_text);
 
         }
 
-        instance.initState = "configuring";
+        instance.initState = 'configuring';
 
         if (conf_key_package) {
-            (instance.instance as any)[conf_key_package.propertyKey] = Object.assign(
-                conf_key_package.defaultConfiguration,
-                (instance.instance as any)[conf_key_package.propertyKey] || {},
-                matching_conf && matching_conf.config || {}
-            );
+            (instance.instance as any)[conf_key_package.propertyKey] = {
+                ...conf_key_package.defaultConfiguration,
+                ...(instance.instance as any)[conf_key_package.propertyKey],
+                ...(matching_conf && matching_conf.config || {})
+            };
         }
 
-
-        if (typeof instance.instance.onConfigure == "function") {
-            this.logger.spam(`Starting to configure "${instance.provides}${instance.id ? '" with id "' + instance.id : ''}".`);
+        if (typeof instance.instance.onConfigure == 'function') {
+            this.logger.spam(`Starting to configure ${instance.provides}${instance.id ? '[' + instance.id + ']' : ''}`);
 
             await instance.instance.onConfigure.apply(instance.instance);
 
-            this.logger.spam(`"${instance.provides}${instance.id ? '" with id "' + instance.id : ''}" is configured.`);
+            this.logger.spam(`${instance.provides}${instance.id ? '[' + instance.id + ']' : ''} is configured`);
         }
 
-        instance.initState = "configured";
+        instance.initState = 'configured';
 
-        if (typeof (instance.instance as ConfigurationProvider).onProvideConfigurations == "function") {
+        if (typeof (instance.instance as ConfigurationProvider).onProvideConfigurations == 'function') {
             const configs = await instance.instance.onProvideConfigurations.apply(instance.instance);
 
             const maps = instance.instance.__tna_di_config_id_map__;
@@ -250,70 +278,77 @@ export class Providers {
 
     async initInstances() {
 
-        this.logger.info(`Initializing ${this.instances.length} instances.`);
+        this.logger.info(`Initializing ${this.instances.length} instances`);
 
         for (let instance of this.instances as InstancePackage<OnInit>[]) {
-            if (instance.initState !== "configured") {
-                if (instance.initState == "unset") {
+            if (instance.initState !== 'configured') {
+                if (instance.initState == 'unset') {
                     await this.applyConfiguration(instance as any);
                 } else {
-                    throw new BootstrapPhaseError(`Trying to init "${instance.provides}"${instance.id ? ' with id "' + instance.id : '"'} although it has already been initialized.`);
+                    throw new BootstrapPhaseError(`Trying to init ${instance.provides}${instance.id ? '[' + instance.id : ']'} although it has already been initialized`);
                 }
             }
 
-            instance.initState = "initializing";
+            instance.initState = 'initializing';
 
-            if (typeof instance.instance.onInit == "function") {
+            if (typeof instance.instance.onInit == 'function') {
 
-                this.logger.spam(`Starting to initialize "${instance.provides}${instance.id ? '" with id "' + instance.id : ''}"`);
+                this.logger.spam(`Starting to initialize ${instance.provides}${instance.id ? '[' + instance.id + ']' : ''}`);
                 await instance.instance.onInit.apply(instance.instance);
 
-                this.logger.spam(`"${instance.provides}${instance.id ? '" with id "' + instance.id : ''}" is initialized`);
+                this.logger.spam(`${instance.provides}${instance.id ? '[' + instance.id + ']' : ''} is initialized`);
 
             }
-            instance.initState = "initialized";
+            instance.initState = 'initialized';
         }
 
-        this.logger.info(`initialization complete`);
+        this.logger.info(`Initialization complete`);
     }
 
     announceReady() {
-        this.logger.info(`Announcing ready state to ${this.instances.length} instances.`);
+        this.logger.info(`Announcing ready state to ${this.instances.length} instances`);
 
         for (let instance of this.instances as InstancePackage<OnReady>[]) {
-            if (instance.initState !== "initialized") {
-                throw new BootstrapPhaseError(`Trying to announce ready state to "${instance.provides}"${instance.id ? ' with id "' + instance.id + '"' : ''} although it is not initialized yet.`);
+            if (instance.initState !== 'initialized') {
+                throw new BootstrapPhaseError(`Trying to announce ready state to ${instance.provides}${instance.id ? '[' + instance.id + ']' : ''} although it is not initialized yet`);
             }
 
-            if (typeof instance.instance.onReady == "function") {
+            if (typeof instance.instance.onReady == 'function') {
                 instance.instance.onReady();
             }
-            instance.initState = "ready";
+            instance.initState = 'ready';
         }
     }
 
     async destroyInstances() {
-        this.logger.info(`Destroying ${this.instances.length} instances.`);
-
+        this.logger.info(`Destroying ${this.instances.length} instances`);
+        let destructionErrors: Error[] = [];
         for (let instance of this.instances as InstancePackage<OnDestroy>[]) {
 
-            if (instance.initState === "destroyed") {
-                throw new BootstrapPhaseError(`Trying to destroy "${instance.provides}"${instance.id ? ' with id "' + instance.id : ''}" although it is already destroyed.`);
+            if (instance.initState === 'destroyed') {
+                throw new BootstrapPhaseError(`Trying to destroy ${instance.provides}${instance.id ? '[' + instance.id : ']'} although it is already destroyed`);
             }
 
-            if (instance.initState === "destroying") {
-                throw new BootstrapPhaseError(`Trying to destroy "${instance.provides}"${instance.id ? ' with id "' + instance.id : ''}" although it is already beeing destroyed.`);
+            if (instance.initState === 'destroying') {
+                throw new BootstrapPhaseError(`Trying to destroy ${instance.provides}${instance.id ? '[' + instance.id : ']'} although it is already beeing destroyed`);
             }
 
-            instance.initState = "destroying";
-
-            if (typeof instance.instance.onDestroy == "function") {
-                await instance.instance.onDestroy();
+            instance.initState = 'destroying';
+            if (typeof instance.instance.onDestroy == 'function') {
+                this.logger.spam(`Calling onDestroy on ${instance.provides}`);
+                try {
+                    await instance.instance.onDestroy();
+                } catch (e) {
+                    this.logger.error(`Failed to destroy ${instance.provides}`, e);
+                    destructionErrors.push(e);
+                }
+                this.logger.spam(`${instance.provides} destroyed`);
             }
 
-            instance.initState = "destroyed";
+            instance.initState = 'destroyed';
         }
-
+        this.logger.info('All instances destroyed');
+        return destructionErrors;
     }
 
 
@@ -325,12 +360,12 @@ export class Providers {
     gimme<T>(instance: string | any, caller: string, id: string): T
     gimme<T>(instance: string | any, caller: string, id: string, callerId: string): T
     gimme<T>(instance: string | any, caller: string, id?: string, callerId?: string): T {
-        const instance_name = typeof instance === "string" ? instance : instance.name;
+        const instance_name = typeof instance === 'string' ? instance : instance.name;
 
-        this.logger.spam(`"${caller}" requests "${instance_name}"${id ? ' with id "' + id + '"' : ""}.`);
+        this.logger.spam(`${caller} requires ${instance_name}${id ? '[' + id + ']' : ''}`);
 
         // pseudo-inject new logger if needed
-        if (instance_name == "Logger") {
+        if (instance_name == 'Logger') {
             const logger = Logger.build()
                 .className(caller)
                 .id(callerId)
@@ -343,44 +378,45 @@ export class Providers {
         // handle actual instances
         const previously_created_instance = this.instances
             .find(inst => (inst.provides === instance_name)
-                && (id ? inst.id === id : true)
+                && (inst.id === id)
             );
 
         if (previously_created_instance) {
 
-            this.logger.spam(`Already have instance of "${instance_name}"${id ? ' for id "' + id + '"' : ""}.`);
+            this.logger.spam(`Already have instance of ${instance_name}${id ? '[' + id + ']' : ''}`);
 
 
             return previously_created_instance.instance;
         }
 
-        this.logger.spam(`Looking for template of class "${instance_name}".`);
+        this.logger.spam(`Looking for declaration of ${instance_name}`);
 
 
         const template_package = this.templates.find(templ => templ.provides == instance_name);
 
         if (!template_package) {
-            throw new MissingDeclarationError(`No declaration for class "${instance_name}"`);
+            this.logger.warn(`${instance_name} is not found in:`, this.templates.map(templ => templ.provides));
+            throw new MissingDeclarationError(`No declaration for class ${instance_name}`);
         }
 
-        this.logger.spam(`Creating constructor argumentes for "${instance_name}".`);
+        this.logger.spam(`Creating constructor argumentes of ${instance_name}`);
 
         const constructorArguments: any[] = template_package.constructorArgs
             .map(className => this.gimme(className, instance_name, null, id));
 
-        this.logger.info(`Creating new instance of "${instance_name}"${id ? ' with id "' + id + '"' : ""}.`);
+        this.logger.info(`Creating new instance of ${instance_name}${id ? '[' + id + ']' : ''}`);
 
         const new_instance = this.createInstance(template_package.template, constructorArguments);
 
         if (new_instance.__tna_di_inject_with_id__) {
-            this.logger.spam(`Injecting instances with id for "${instance_name}"${id ? ' with id "' + id + '"' : ""}.`);
+            this.logger.spam(`Injecting instances with id for ${instance_name}${id ? '[' + id + ']' : ''}`);
 
             for (let option of new_instance.__tna_di_inject_with_id__) {
                 new_instance[option.paramKey] = this.gimme(option.type, instance_name, option.id, id);
             }
         }
 
-        this.logger.spam(`Adding  "${instance_name}" ${id ? 'with id "' + id + '" ' : ""}to list of instances.`);
+        this.logger.spam(`Adding ${instance_name}${id ? '[' + id + ']' : ''} to list of instances`);
 
         this.instances.push({
             consumes: template_package
@@ -391,49 +427,49 @@ export class Providers {
             id: id,
             instance: new_instance,
             provides: instance_name,
-            initState: "unset",
+            initState: 'unset',
         });
 
-        this.logger.spam(`Finished creating "${instance_name}"${id ? ' with id "' + id + '"' : ""}.`);
+        new_instance['__tna_di_id'] = id;
+        new_instance['__tna_di_name'] = instance_name;
+
+        this.logger.spam(`Finished creating ${instance_name}${id ? '[' + id + ']' : ''}`);
 
         return new_instance;
     }
 
-    register(template: IApplication) {
-
+    register(template: IApplication, caller: string) {
         if (!template.__tna_di_decorated__) {
-            throw new Error(`"${template}" is not injecable! Decorate with @Injectable() to fix this.`)
+            throw new Error(`'${template}' is not injecable! Decorate with @Injectable() to fix this.`)
         }
-
+        
         const templ_name = template.__tna_di_provides__;
-
-        if (this.templates.findIndex(templ => templ_name == templ.provides) > -1) {
-            this.logger.warn(`Skipping to register() "${templ_name}" since it's already known.`);
-            return;
+        const prev_idx = this.templates.findIndex(templ => templ_name == templ.provides)
+        if (prev_idx > -1) {
+            this.logger.info(`Removing current declaration of ${this.templates[prev_idx].provides} because of update by ${caller}`);
+            this.templates.splice(prev_idx, 1);
         }
-
-        this.logger.spam(`Registering "${templ_name}" .`);
-
         const configs = template.__tna_di_configs__ || [];
+        
         this.registerConfigs(configs);
-
-        const declarations = template.__tna_di_declarations__ || [];
-
-        if (declarations.length) {
-
-            this.logger.spam(`Registering templates declared by "${templ_name}".`);
-
-            for (const declaration of declarations) {
-                this.register(declaration);
-            }
-        }
-
+        
+        this.logger.spam(`Registering ${templ_name} as declared by ${caller}`);
         this.templates.push({
             template: template,
             provides: templ_name,
             constructorArgs: template.__tna_di_consumes__,
-            multiIds: []
+            multiIds: [],
+            declaredBy: caller
         });
+        
+        const declarations = template.__tna_di_declarations__ || [];
+        if (declarations.length) {
+            this.logger.spam(`Evaluating declarations of ${templ_name}`);
+
+            for (const declaration of declarations) {
+                this.register(declaration, templ_name);
+            }
+        }
     }
 
     registerConfigs(configs: Configuration<any>[]) {
@@ -445,7 +481,7 @@ export class Providers {
                 );
 
             if (previous_config) {
-                throw new UnspecificConfigError(`Configuration for "${config.forModule}"${config.id ? ' with id "' + config.id + '"' : ""} is already present`);
+                throw new UnspecificConfigError(`Configuration for ${config.forModule}${config.id ? '[' + config.id + ']' : ''} is already present`);
             }
 
             this.options.configurations.push(config);

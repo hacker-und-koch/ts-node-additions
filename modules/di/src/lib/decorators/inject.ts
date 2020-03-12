@@ -1,5 +1,8 @@
-export function Inject(type: any, id: string) {
+export function Inject(type: any, id?: string) {
     return function (target: any, paramKey: string) {
+        if (typeof type === 'undefined') {
+            throw new Error(`Error handling @Inject on ${paramKey} of ${target.constructor.name}. Type is undefined!`);
+        } 
         if (!target.__tna_di_inject_with_id__) {
             target.__tna_di_inject_with_id__ = [];
         }
