@@ -1,0 +1,26 @@
+{
+    "name": "@tna/http",
+    "version": "0.0.0",
+    "description": "",
+    "main": "bin/index.js",
+    "types": "declarations/index.js",
+    "scripts": {
+        "start": "node bin/example.js",
+        "start:watch": "npx nodemon --exec node bin/example.js",
+        "build": "tsc",
+        "build:watch": "tsc --watch",
+        "test": "jasmine",
+        "test:watch": "npx nodemon --exec jasmine"
+    },
+    "license": "MIT",
+    "dependencies": {
+        "reflect-metadata": "^0.1.13"
+    },
+    "devDependencies": {
+        "@types/jasmine": "^3.5.5",
+        "@types/node": "^13.7.2",
+        "jasmine": "^3.5.0",
+        "nodemon": "^2.0.2",
+        "typescript": "^3.7.5"
+    }
+}
