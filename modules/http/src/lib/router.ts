@@ -7,6 +7,7 @@ import { Logger } from '@tna/logger';
 import { Default404Route } from './default-404.route';
 import { Response, Request } from './models';
 import { RequestHandler } from './request-handler';
+import { HandlingError } from './errors';
 
 export interface RouterOptions extends ServerConfiguration {
     maxRequestSeconds?: number;
@@ -45,8 +46,6 @@ export class Router extends RequestHandler<void, void> implements OnConfigure, O
         }
     }
 
-
-
     async kickOfHandling(req: IncomingMessage, res: ServerResponse) {
         const request: Request<unknown> = this.genRequest(req);
         const response: Response = this.genResponse(res);
@@ -54,7 +53,7 @@ export class Router extends RequestHandler<void, void> implements OnConfigure, O
         this.logger.spam(`Handling request ${request.id}.`)
         const timeout = setTimeout(() => {
             this.logger.warn(`Closing request ${request.id} because of timeout.`);
-            res.statusCode = 500;
+            res.statusCode = 408;
             res.end();
         }, this.configuration.maxRequestSeconds);
 
@@ -67,8 +66,13 @@ export class Router extends RequestHandler<void, void> implements OnConfigure, O
         try {
             body = await this.handleRequest(request, response);
         } catch (e) {
-            this.logger.error(`Failed to handle request ${request.id}.`, e);
-            res.statusCode = 500;
+            if (e instanceof HandlingError) {
+                res.statusCode = e.statusCode;
+                res.write(e.message);
+            } else {
+                this.logger.error(`Failed to handle request ${request.id}.`, e);
+                res.statusCode = 500;
+            }
             res.end();
             return;
         }
@@ -97,7 +101,7 @@ export class Router extends RequestHandler<void, void> implements OnConfigure, O
                 res.statusCode = code;
                 return result;
             },
-            headers: (headers: {[key: string]: string}) => {
+            headers: (headers: { [key: string]: string }) => {
                 for (let name of Object.keys(headers)) {
                     res.setHeader(name, headers[name]);
                 }

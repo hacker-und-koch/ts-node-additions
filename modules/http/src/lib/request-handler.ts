@@ -2,6 +2,7 @@ import { Injectable, Inject } from '@tna/di';
 import { Logger } from '@tna/logger';
 import { Default404Route } from './default-404.route';
 import { Response, Request } from './models';
+import { evaluatePathname } from './util';
 
 
 @Injectable()
@@ -40,11 +41,13 @@ export class RequestHandler<T, U> {
 
 
     private isHandlerRelevant(request: Request<unknown>, handler: RequestHandler<unknown, unknown>) {
-        return request.parsedUrl.path === handler.path;
+        return request.parsedUrl.pathname === handler.path;
     }
 
     protected async handleRequest(request: Request<unknown>, response: Response): Promise<unknown> {
-        if (this.isHandlerRelevant(request, this)) {
+        const evaluatedRequestUrl = evaluatePathname(request.parsedUrl.pathname, this.path);
+
+        if (evaluatedRequestUrl.isMatch) {
             this.logger.info(`Handling request ${request.id}`);
             return this.handle(request as Request<any>, response);
         }
