@@ -19,9 +19,12 @@
     },
     "repository": {
         "type": "git",
-        "url": "git://localhost/devtalk/test"
+        "url": "git@github.com:hacker-und-koch/ts-node-additions.git"
     },
-    "license": "MIT",
+    "publishConfig": {
+        "registry": "https://npm.pkg.github.com/"
+    },
+    "license": "LGPLv3.0",
     "dependencies": {
         "reflect-metadata": "^0.1.13"
     },

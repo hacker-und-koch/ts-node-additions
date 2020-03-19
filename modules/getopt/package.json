@@ -12,7 +12,14 @@
         "test": "jasmine",
         "test:watch": "npx nodemon --exec jasmine"
     },
-    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "git@github.com:hacker-und-koch/ts-node-additions.git"
+    },
+    "publishConfig": {
+        "registry": "https://npm.pkg.github.com/"
+    },
+    "license": "LGPLv3.0",
     "dependencies": {
         "reflect-metadata": "^0.1.13"
     },
