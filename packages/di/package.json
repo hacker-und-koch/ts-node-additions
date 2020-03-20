@@ -21,11 +21,11 @@
         "type": "git",
         "url": "git@github.com:hacker-und-koch/ts-node-additions.git"
     },
-    "publishConfig": {
-        "registry": "https://npm.pkg.github.com/"
-    },
     "license": "LGPLv3.0",
     "dependencies": {
+        "@tna/getopt": "^0.0.0",
+        "@tna/logger": "^0.0.0",
+        "@tna/util": "^0.0.0",
         "reflect-metadata": "^0.1.13"
     },
     "devDependencies": {

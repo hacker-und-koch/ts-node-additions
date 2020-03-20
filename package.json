@@ -8,10 +8,10 @@
     "url": "git@github.com:hacker-und-koch/ts-node-additions.git"
 },
   "workspaces": [
-    "modules/getopt",
-    "modules/logger",
-    "modules/util",
-    "modules/di",
-    "modules/http"
+    "packages/getopt",
+    "packages/logger",
+    "packages/util",
+    "packages/di",
+    "packages/http"
   ]
 }
