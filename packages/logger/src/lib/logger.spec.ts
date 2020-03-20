@@ -100,18 +100,18 @@ describe("Logger", () => {
         const { logger, spies } = createTestLoggerAndSpies();
 
         expect(logger.spam('moin')).toBeTruthy();
-        expect(spies.writeOut as any).toHaveBeenCalledWith('test[case]  -  moin\n');
+        expect(spies.writeOut as any).toHaveBeenCalledWith('  -  test[case]: moin\n');
         
         logger.warn(JSON.stringify({ 'x': 'y', 'z': 42 }, null, 4));
         expect(spies.writeOut as any).toHaveBeenCalledWith(
-            'test[case] [x] {\n' +
-            'test[case] [x]     "x": "y",\n' +
-            'test[case] [x]     "z": 42\n' +
-            'test[case] [x] }\n'
+            ' [x] test[case]: {\n' +
+            ' [x] test[case]:     "x": "y",\n' +
+            ' [x] test[case]:     "z": 42\n' +
+            ' [x] test[case]: }\n'
         );
 
         logger.error('Going to stderr');
-        expect(spies.writeErr).toHaveBeenCalledWith('test[case] !!! Going to stderr\n');
+        expect(spies.writeErr).toHaveBeenCalledWith(' !!! test[case]: Going to stderr\n');
     });
 });
 

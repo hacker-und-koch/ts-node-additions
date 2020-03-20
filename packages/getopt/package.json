@@ -16,7 +16,7 @@
         "type": "git",
         "url": "git@github.com:hacker-und-koch/ts-node-additions.git"
     },
-    "license": "LGPLv3.0",
+    "license": "LGPL-3.0",
     "dependencies": {
         "reflect-metadata": "^0.1.13"
     },
