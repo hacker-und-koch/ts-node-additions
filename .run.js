@@ -6,7 +6,7 @@ const { platform } = require('os');
 const { write: writeFile } = require('fs');
 
 const DEBUG = true;
-const IS_WINDOWS = platform().indexOf('win') > -1;
+const IS_WINDOWS = /^win[36][24]$/.test(platform());
 
 if (IS_WINDOWS) {
     console.debug('Detected Windows.');
