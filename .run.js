@@ -84,7 +84,7 @@ async function run(argv, debug) {
         console.log('++ checking out release branch');
         await git(['checkout', 'release']);
         console.log('++ merging master branch')
-        await git(['merge', '--no-ff', '-m', `release: ${newVersion}`, 'master']);
+        await git(['merge', '--no-ff', '-m', `'release: ${newVersion}'`, 'master']);
 
         console.log('++ spreading version to packages');
         await spreadVersionToDependencies(newVersion);
@@ -102,12 +102,12 @@ async function run(argv, debug) {
 
         console.log('++ merging release into master');
         await git(['checkout', 'master']);
-        await git(['merge', '--no-ff', '-m', `merge: after release ${newVersion}`, 'release']);
+        await git(['merge', '--no-ff', '-m', `'merge: after release ${newVersion}'`, 'release']);
         await git(['push']);
 
         console.log('++ merging master into develop');
         await git(['checkout', 'develop']);
-        await git(['merge', '--no-ff', '-m', `merge: after release ${newVersion}`, 'develop']);
+        await git(['merge', '--no-ff', '-m', `'merge: after release ${newVersion}'`, 'develop']);
         await git(['push']);
     }
 
