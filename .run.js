@@ -70,10 +70,7 @@ async function run(argv, debug) {
     }
 
     async function release() {
-        console.log('++ checking out release branch');
-        await git(['checkout', 'release']);
-        console.log('++ merging master branch')
-        await git(['merge', '--no-ff', '-m', `release: ${newVersion}`, 'master']);
+        await yarn(['install', '--ci']);
 
         console.log('++ building packages');
         await build();
@@ -84,6 +81,11 @@ async function run(argv, debug) {
         console.log('++ determining new version');
         const newVersion = await getVersion();
 
+        console.log('++ checking out release branch');
+        await git(['checkout', 'release']);
+        console.log('++ merging master branch')
+        await git(['merge', '--no-ff', '-m', `release: ${newVersion}`, 'master']);
+
         console.log('++ spreading version to packages');
         await spreadVersionToDependencies(newVersion);
 
@@ -92,20 +94,21 @@ async function run(argv, debug) {
         await yarn(['version', '--new-version', newVersion]);
 
         console.log('++ commiting and pushing changes');
-        await git(['add', './package.json', ...WORKSPACES.map(ws => `${ws}/package.json`)]);        
+        await git(['add', './package.json', ...WORKSPACES.map(ws => `${ws}/package.json`)]);
         await git(['commit', '-m', `release: ${VERSION}`]);
         await git(['tag', `release-${VERSION}`]);
+        await git(['push', '--tags']);
+
 
         console.log('++ merging release into master');
         await git(['checkout', 'master']);
         await git(['merge', '--no-ff', '-m', `merge: after release ${newVersion}`, 'release']);
+        await git(['push']);
 
         console.log('++ merging master into develop');
         await git(['checkout', 'develop']);
         await git(['merge', '--no-ff', '-m', `merge: after release ${newVersion}`, 'develop']);
-
-        console.log('++ pushing changes');
-        await git(['push', '--tags']);
+        await git(['push']);
     }
 
     async function runYarn(args, workspaces = [...WORKSPACES]) {
@@ -242,7 +245,7 @@ async function run(argv, debug) {
         return validAnswer;
     }
 
-    async function spreadVersionToDependencies() {
+    async function spreadVersionToDependencies(version) {
         return Promise.all(
             WORKSPACES.map(workspace => applyVersionToWorkspaceDependencies(workspace, version))
         );
