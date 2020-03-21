@@ -216,7 +216,7 @@ async function run(argv, debug) {
             throw new Error('User aborted.');
         }
 
-        return validAnswer;
+        return newVersion;
     }
 
     function question(text) {
@@ -251,7 +251,7 @@ async function run(argv, debug) {
 
     function applyVersionToWorkspaceDependencies(workspace, version) {
         return new Promise((resolve, reject) => {
-            const packageJsonPath = resolvePath(__dirname, workspace, 'packages.json');
+            const packageJsonPath = resolvePath(__dirname, workspace, 'package.json');
 
             const packageJson = require(packageJsonPath);
 
