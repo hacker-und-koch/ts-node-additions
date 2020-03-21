@@ -1,5 +1,5 @@
 {
-    "name": "@tna/logger",
+    "name": "@hacker-und-koch/logger",
     "version": "0.0.0",
     "description": "",
     "main": "bin/index.js",

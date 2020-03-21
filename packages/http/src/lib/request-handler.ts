@@ -1,5 +1,5 @@
-import { Injectable, Inject } from '@tna/di';
-import { Logger } from '@tna/logger';
+import { Injectable, Inject } from '@hacker-und-koch/di';
+import { Logger } from '@hacker-und-koch/logger';
 import { Default404Route } from './default-404.route';
 import { Response, Request } from './models';
 import { evaluatePathname } from './util';

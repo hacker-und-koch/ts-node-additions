@@ -90,7 +90,7 @@ async function run(argv, debug) {
         await spreadVersionToDependencies(newVersion);
 
         console.log('++ publishing packages via yarn');
-        await runCommandInWorkspaces('npm', ['publish']);
+        await runCommandInWorkspaces('npm', ['publish', '--access', 'public']);
         await yarn(['version', '--new-version', newVersion]);
 
         console.log('++ commiting and pushing changes');
@@ -236,7 +236,7 @@ async function run(argv, debug) {
             const packageJson = require(packageJsonPath);
 
             for (let name of Object.keys((packageJson.dependencies || {}))) {
-                if (/@tna\/.+/.test(name)) {
+                if (/@hacker-und-koch\/.+/.test(name)) {
                     packageJson.dependencies[name] = version;
                 }
             }

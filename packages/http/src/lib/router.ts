@@ -1,9 +1,9 @@
-import { Injectable, InjectConfiguration, Inject, OnConfigure, OnInit } from '@tna/di';
+import { Injectable, InjectConfiguration, Inject, OnConfigure, OnInit } from '@hacker-und-koch/di';
 import { Server, ServerConfiguration } from './server';
 import { randomBytes } from 'crypto';
 import { IncomingMessage, ServerResponse } from 'http';
 import { parse as parseUrl } from 'url';
-import { Logger } from '@tna/logger';
+import { Logger } from '@hacker-und-koch/logger';
 import { Default404Route } from './default-404.route';
 import { Response, Request } from './models';
 import { RequestHandler } from './request-handler';

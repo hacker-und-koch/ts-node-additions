@@ -1,7 +1,7 @@
 import { Providers } from "./providers";
 import { IApplication } from "./hooks/injectable";
 import { Injectable } from "../decorators";
-import { Loglevel } from "@tna/logger";
+import { Loglevel } from "@hacker-und-koch/logger";
 
 export interface StepTesterOptions {
     configurations?: any[];

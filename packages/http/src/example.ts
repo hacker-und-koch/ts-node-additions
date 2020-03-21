@@ -1,5 +1,5 @@
-import { Application, bootstrap, OnReady, Injectable } from '@tna/di';
-import { Logger } from '@tna/logger';
+import { Application, bootstrap, OnReady, Injectable } from '@hacker-und-koch/di';
+import { Logger } from '@hacker-und-koch/logger';
 
 import { Server, Router, Request, Response, RequestHandler, HandlingError } from './lib';
 
