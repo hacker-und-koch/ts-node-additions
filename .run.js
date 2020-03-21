@@ -26,10 +26,10 @@ run(process.argv, DEBUG)
 async function run(argv, debug) {
     console.debug = (...args) => debug ? console.log(...args) : null;
 
-    if (await yarn(['--help'], undefined, true) !== 0) {
+    if (await yarn(['--version']) !== 0) {
         throw new Error(`Please install 'yarn'.`);
     }
-    if (await git(['--help'], undefined, true) !== 0) {
+    if (await git(['--version']) !== 0) {
         throw new Error(`Please install 'git'.`);
     }
 
