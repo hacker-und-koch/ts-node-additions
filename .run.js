@@ -3,7 +3,7 @@ const { workspaces: WORKSPACES, version: VERSION } = require(resolvePath(__dirna
 const { spawn } = require('child_process');
 const { createInterface: createRlInterface } = require('readline');
 const { platform } = require('os');
-const { write: writeFile } = require('fs');
+const { writeFile } = require('fs');
 
 const DEBUG = true;
 const IS_WINDOWS = /^win[36][24]$/.test(platform());
