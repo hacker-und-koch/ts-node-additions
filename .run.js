@@ -62,11 +62,11 @@ async function run(argv, debug) {
     }
 
     async function build(workspaces) {
-        return runYarn('build', workspaces);
+        return runCommandInWorkspaces('yarn', 'build', workspaces);
     }
 
     async function test(workspaces) {
-        return runYarn('test', workspaces);
+        return runCommandInWorkspaces('yarn', 'test', workspaces);
     }
 
     async function release() {
@@ -90,7 +90,7 @@ async function run(argv, debug) {
         await spreadVersionToDependencies(newVersion);
 
         console.log('++ publishing packages via yarn');
-        await runYarn(['publish', '--new-version', newVersion]);
+        await runCommandInWorkspaces('npm', ['publish']);
         await yarn(['version', '--new-version', newVersion]);
 
         console.log('++ commiting and pushing changes');
@@ -111,7 +111,7 @@ async function run(argv, debug) {
         await git(['push']);
     }
 
-    async function runYarn(args, workspaces = [...WORKSPACES]) {
+    async function runCommandInWorkspaces(command, args, workspaces = [...WORKSPACES]) {
         if (!Array.isArray(args)) {
             args = [args];
         }
@@ -129,49 +129,29 @@ async function run(argv, debug) {
 
         for (let workspace of workspaces) {
             console.log(`> Running ${args[0]} in ${workspace}`);
-            if (await yarn(args, workspace) !== 0) {
+            if (await runCommand(command, args, workspace) !== 0) {
                 throw new Error(`Yarn exited with non-zero code in ${workspace}.`);
             }
         }
     }
 
-    function yarn(args, cwd = process.cwd(), nolog = false) {
-        args = [...args];
-
-        let cmd = 'yarn';
-
-        if (IS_WINDOWS) {
-            args.unshift('yarn');
-            args.unshift('/c');
-
-            cmd = process.env.comspec;
-        }
-
-        return new Promise((resolve, reject) => {
-            // console.debug(`Spawning ${cmd}`, args);
-            const proc = spawn(cmd, args, {
-                cwd,
-                shell: true,
-                stdio: 'pipe',
-            });
-
-            if (!nolog) {
-                proc.stdout.on('data', d => process.stdout.write(d));
-                proc.stderr.on('data', d => process.stderr.write(d));
-            }
-
-            proc.on('error', reject);
-            proc.on('exit', resolve);
-        });
+    function yarn(args, cwd = process.cwd()) {
+        return runCommand('yarn', args, cwd);
     }
 
     function git(args, cwd = process.cwd()) {
+        return runCommand('git', args, cwd);
+    }
+
+    function npm(args, cwd = process.cwd()) {
+        return runCommand('npm', args, cwd);
+    }
+
+    function runCommand(cmd, args = [], cwd = process.cwd()) {
         args = [...args];
 
-        let cmd = 'git';
-
         if (IS_WINDOWS) {
-            args.unshift('git');
+            args.unshift(cmd);
             args.unshift('/c');
 
             cmd = process.env.comspec;
@@ -260,6 +240,8 @@ async function run(argv, debug) {
                     packageJson.dependencies[name] = version;
                 }
             }
+
+            packageJson.version = version;
 
             writeFile(packageJsonPath, JSON.stringify(packageJson, null, 4), err => {
                 if (err) {
