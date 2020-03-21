@@ -1,0 +1,21 @@
+{
+    "compilerOptions": {
+        "declarationDir": "declarations",
+        "experimentalDecorators": true,
+        "emitDecoratorMetadata": true,
+        "noImplicitAny": true,
+        "outDir": "bin/",
+        "declaration": true,
+        "baseUrl": "bin/",
+        "lib": [
+            "es2015"
+        ]
+    },
+    "include": [
+        "src/**/*.ts"
+    ],
+    "exclude": [
+        "node_modules"
+    ],
+    "compileOnSave": true
+}

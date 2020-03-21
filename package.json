@@ -1,6 +1,23 @@
 {
-  "name": "@jp/lib",
+  "name": "@tna/lib",
   "version": "0.0.0",
   "private": true,
-  "license": "MIT"
+  "license": "LGPL-3.0",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:hacker-und-koch/ts-node-additions.git"
+  },
+  "scripts": {
+    "build": "node .run.js build",
+    "test": "node .run.js test",
+    "setup": "node .run.js setup",
+    "release": "node .run.js release"
+  },
+  "workspaces": [
+    "packages/getopt",
+    "packages/logger",
+    "packages/util",
+    "packages/di",
+    "packages/http"
+  ]
 }
