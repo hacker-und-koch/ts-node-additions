@@ -165,7 +165,7 @@ async function run(argv, debug) {
         });
     }
 
-    function git(args, cwd = process.cwd(), nolog = false) {
+    function git(args, cwd = process.cwd()) {
         args = [...args];
 
         let cmd = 'git';
@@ -185,10 +185,8 @@ async function run(argv, debug) {
                 stdio: 'pipe',
             });
 
-            if (!nolog) {
-                proc.stdout.on('data', d => process.stdout.write(d));
-                proc.stderr.on('data', d => process.stderr.write(d));
-            }
+            proc.stdout.on('data', d => process.stdout.write(d));
+            proc.stderr.on('data', d => process.stderr.write(d));
 
             proc.on('error', reject);
             proc.on('exit', resolve);
