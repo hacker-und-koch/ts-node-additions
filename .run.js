@@ -1,7 +1,9 @@
 const { resolve: resolvePath } = require('path');
-const { workspaces: WORKSPACES } = require(resolvePath(__dirname, 'package.json'));
+const { workspaces: WORKSPACES, version: VERSION } = require(resolvePath(__dirname, 'package.json'));
 const { spawn } = require('child_process');
+const { createInterface: createRlInterface } = require('readline');
 const { platform } = require('os');
+const { write: writeFile } = require('fs');
 
 const DEBUG = true;
 const IS_WINDOWS = platform().indexOf('win') > -1;
@@ -19,13 +21,16 @@ run(process.argv, DEBUG)
             process.exit(1);
         }
     })
-    .then(command => console.log(`Done ${command}ing.`));
+    .then(() => console.log(`.run.js exiting cleanly.`));
 
 async function run(argv, debug) {
     console.debug = (...args) => debug ? console.log(...args) : null;
 
     if (await yarn(['--help'], undefined, true) !== 0) {
         throw new Error(`Please install 'yarn'.`);
+    }
+    if (await git(['--help'], undefined, true) !== 0) {
+        throw new Error(`Please install 'git'.`);
     }
 
     // remove exec-path
@@ -47,13 +52,14 @@ async function run(argv, debug) {
         case "test":
             await test(argv.map(arg => `packages/${arg}`));
             break;
-        case "spread-version":
-            await spreadVersion();
+        case "release":
+            await release();
     }
 
     return command;
-
-
+    async function install() {
+        return yarn(['install']);
+    }
 
     async function build(workspaces) {
         return runYarn('build', workspaces);
@@ -63,8 +69,43 @@ async function run(argv, debug) {
         return runYarn('test', workspaces);
     }
 
-    async function install() {
-        return yarn(['install'], process.cwd());
+    async function release() {
+        console.log('++ checking out release branch');
+        await git(['checkout', 'release']);
+        console.log('++ merging master branch')
+        await git(['merge', '--no-ff', '-m', `release: ${newVersion}`, 'master']);
+
+        console.log('++ building packages');
+        await build();
+
+        console.log('++ testing packages');
+        await test();
+
+        console.log('++ determining new version');
+        const newVersion = await getVersion();
+
+        console.log('++ spreading version to packages');
+        await spreadVersionToDependencies(newVersion);
+
+        console.log('++ publishing packages via yarn');
+        await runYarn(['publish', '--new-version', newVersion]);
+        await yarn(['version', '--new-version', newVersion]);
+
+        console.log('++ commiting and pushing changes');
+        await git(['add', './package.json', ...WORKSPACES.map(ws => `${ws}/package.json`)]);        
+        await git(['commit', '-m', `release: ${VERSION}`]);
+        await git(['tag', `release-${VERSION}`]);
+
+        console.log('++ merging release into master');
+        await git(['checkout', 'master']);
+        await git(['merge', '--no-ff', '-m', `merge: after release ${newVersion}`, 'release']);
+
+        console.log('++ merging master into develop');
+        await git(['checkout', 'develop']);
+        await git(['merge', '--no-ff', '-m', `merge: after release ${newVersion}`, 'develop']);
+
+        console.log('++ pushing changes');
+        await git(['push', '--tags']);
     }
 
     async function runYarn(args, workspaces = [...WORKSPACES]) {
@@ -104,9 +145,10 @@ async function run(argv, debug) {
         }
 
         return new Promise((resolve, reject) => {
-            console.debug(`Spawning ${cmd}`, args);
+            // console.debug(`Spawning ${cmd}`, args);
             const proc = spawn(cmd, args, {
                 cwd,
+                shell: true,
                 stdio: 'pipe',
             });
 
@@ -119,5 +161,136 @@ async function run(argv, debug) {
             proc.on('exit', resolve);
         });
     }
-}
 
+    function git(args, cwd = process.cwd(), nolog = false) {
+        args = [...args];
+
+        let cmd = 'git';
+
+        if (IS_WINDOWS) {
+            args.unshift('git');
+            args.unshift('/c');
+
+            cmd = process.env.comspec;
+        }
+
+        return new Promise((resolve, reject) => {
+            // console.debug(`Spawning ${cmd}`, args);
+            const proc = spawn(cmd, args, {
+                cwd,
+                shell: true,
+                stdio: 'pipe',
+            });
+
+            if (!nolog) {
+                proc.stdout.on('data', d => process.stdout.write(d));
+                proc.stderr.on('data', d => process.stderr.write(d));
+            }
+
+            proc.on('error', reject);
+            proc.on('exit', resolve);
+        });
+    }
+
+
+    async function getVersion() {
+        console.log(`Current version is ${VERSION}.`)
+        let validAnswer;
+
+        while (!validAnswer) {
+            const answer = await question(`Please select 'major', 'minor' or 'patch': `);
+            console.debug(`> Answer:`, answer);
+            if (/(major|minor|patch)/.test(answer)) {
+                validAnswer = answer;
+            } else {
+                console.log(`Not a valid answer.`);
+            }
+        }
+        const newVersion = raiseVersion(VERSION, validAnswer);
+        console.log(`This results in jump from >> ${VERSION} << to >> ${newVersion} <<.`);
+
+        const yN = await yesNo(`Continue with ${newVersion}?`);
+
+        if (yN === 'n') {
+            throw new Error('User aborted.');
+        }
+
+        return validAnswer;
+    }
+
+    function question(text) {
+        return new Promise((resolve) => {
+            const rl = createRlInterface(process.stdin, process.stdout);
+            rl.question(text, (resp) => {
+                resolve(resp);
+                rl.close();
+            });
+        });
+    }
+
+    async function yesNo(text) {
+        let validAnswer;
+        while (!validAnswer) {
+            const answer = await question(`${text} [ynYN]: `);
+            console.debug(`> Answer:`, answer);
+            if (/([ynYN])/.test(answer)) {
+                validAnswer = answer.toLowerCase();
+            } else {
+                console.log(`Not a valid answer.`);
+            }
+        }
+        return validAnswer;
+    }
+
+    async function spreadVersionToDependencies() {
+        return Promise.all(
+            WORKSPACES.map(workspace => applyVersionToWorkspaceDependencies(workspace, version))
+        );
+    }
+
+    function applyVersionToWorkspaceDependencies(workspace, version) {
+        return new Promise((resolve, reject) => {
+            const packageJsonPath = resolvePath(__dirname, workspace, 'packages.json');
+
+            const packageJson = require(packageJsonPath);
+
+            for (let name of Object.keys((packageJson.dependencies || {}))) {
+                if (/@tna\/.+/.test(name)) {
+                    packageJson.dependencies[name] = version;
+                }
+            }
+
+            writeFile(packageJsonPath, JSON.stringify(packageJson, null, 4), err => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
+            });
+        });
+    }
+
+
+    function raiseVersion(current, level) {
+        let [
+            major,
+            minor,
+            patch
+        ] = current
+            .split('.')
+            .map(s => Number(s));
+
+        switch (level) {
+            case "major":
+                major += 1;
+                break;
+            case "minor":
+                minor += 1;
+                break;
+            case "patch":
+                patch += 1;
+                break;
+        }
+        return [major, minor, patch].join('.');
+    }
+}
