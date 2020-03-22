@@ -33,6 +33,11 @@ OR
 $ yarn start:watch
 ```
 ### Releases
+#### pre requirements
+```
+$ npm adduser
+```
+#### apply new version and publish packages
 ```
 $ git checkout master
 $ git merge --no-ff develop
