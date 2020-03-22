@@ -89,7 +89,7 @@ async function run(argv, debug) {
         console.log('++ spreading version to packages');
         await spreadVersionToDependencies(newVersion);
 
-        console.log('++ publishing packages via yarn');
+        console.log('++ publishing packages via npm');
         await runCommandInWorkspaces('npm', ['publish', '--access', 'public']);
         await yarn(['version', '--new-version', newVersion]);
 
@@ -107,7 +107,7 @@ async function run(argv, debug) {
 
         console.log('++ merging master into develop');
         await git(['checkout', 'develop']);
-        await git(['merge', '--no-ff', '-m', `'merge: after release ${newVersion}'`, 'develop']);
+        await git(['merge', '--no-ff', '-m', `'merge: after release ${newVersion}'`, 'master']);
         await git(['push']);
     }
 
