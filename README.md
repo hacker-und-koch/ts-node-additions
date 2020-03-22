@@ -34,5 +34,7 @@ $ yarn start:watch
 ```
 ### Releases
 ```
+$ git checkout master
+$ git merge --no-ff develop
 $ node .run.js release
 ```
