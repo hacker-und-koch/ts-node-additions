@@ -1,0 +1,38 @@
+{
+    "name": "@hacker-und-koch/di",
+    "version": "0.0.0",
+    "description": "",
+    "main": "bin/index.js",
+    "types": "declarations/index.js",
+    "scripts": {
+        "start": "node bin/main.js",
+        "start:watch": "npx nodemon --exec node bin/main.js",
+        "build": "tsc",
+        "build:watch": "tsc --watch",
+        "test": "jasmine",
+        "test:watch": "npx nodemon --exec jasmine",
+        "example:getopt": "node bin/examples/getopt greet someone",
+        "example:hooks": "node bin/examples/hooks",
+        "example:logger": "node bin/examples/logger",
+        "example:shared-instance": "node bin/examples/shared-instance",
+        "example:worker-and-app": "node bin/examples/worker-and-app"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git@github.com:hacker-und-koch/ts-node-additions.git"
+    },
+    "license": "LGPL-3.0",
+    "dependencies": {
+        "@hacker-und-koch/getopt": "^0.0.0",
+        "@hacker-und-koch/logger": "^0.0.0",
+        "@hacker-und-koch/util": "^0.0.0",
+        "reflect-metadata": "^0.1.13"
+    },
+    "devDependencies": {
+        "@types/jasmine": "^3.5.5",
+        "@types/node": "^13.7.2",
+        "jasmine": "^3.5.0",
+        "nodemon": "^2.0.2",
+        "typescript": "^3.7.5"
+    }
+}
