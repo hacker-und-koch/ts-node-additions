@@ -34,5 +34,5 @@ $ yarn start:watch
 ```
 ### Releases
 ```
-$ yarn release
+$ node .run.js release
 ```
