@@ -1,5 +1,5 @@
 import { Injectable, bootstrap, Application, Inject, OnReady } from '../lib';
-import { Logger } from '@tna/logger';
+import { Logger } from '@hacker-und-koch/logger';
 
 @Injectable()
 class Worker {

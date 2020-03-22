@@ -1,6 +1,6 @@
 import { Injectable, InjectableOptions } from "./injectable";
 import { Configuration } from "../bootstrapping/configurations";
-import { GetOptConfiguration } from "@tna/getopt";
+import { GetOptConfiguration } from "@hacker-und-koch/getopt";
 
 export interface AppOptions extends InjectableOptions {
   /**

@@ -1,5 +1,5 @@
-import { Injectable, Option, OnInit, OnDestroy, Configuration, InjectConfiguration } from "@tna/di";
-import { Logger } from "@tna/logger";
+import { Injectable, Option, OnInit, OnDestroy, Configuration, InjectConfiguration } from "@hacker-und-koch/di";
+import { Logger } from "@hacker-und-koch/logger";
 import { Server as HttpServer, ServerResponse, IncomingMessage } from 'http';
 import { Socket } from "dgram";
 

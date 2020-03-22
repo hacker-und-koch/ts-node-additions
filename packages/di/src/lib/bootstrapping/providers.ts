@@ -1,9 +1,9 @@
-import { GetOpt, GetOptOption, GetOptConfiguration } from '@tna/getopt';
+import { GetOpt, GetOptOption, GetOptConfiguration } from '@hacker-und-koch/getopt';
 import { ConfigurationProvider, Configuration } from './configurations';
 import { OnConfigure, OnInit, OnReady, OnDestroy } from './hooks';
 import { BootstrapPhaseError, MissingDeclarationError, MissingConfigurationError, UnspecificConfigError } from '../errors';
 import { IInjectable, IApplication } from './hooks/injectable';
-import { Logger, Loglevel } from '@tna/logger';
+import { Logger, Loglevel } from '@hacker-und-koch/logger';
 
 export interface ProviderOptions {
     loglevels?: { [classIdentifier: string]: Loglevel };

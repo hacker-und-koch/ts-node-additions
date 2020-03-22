@@ -1,6 +1,6 @@
 {
-    "name": "@tna/http",
-    "version": "0.0.0",
+    "name": "@hacker-und-koch/http",
+    "version": "0.0.1",
     "description": "",
     "main": "bin/index.js",
     "types": "declarations/index.js",
@@ -18,8 +18,8 @@
     },
     "license": "LGPL-3.0",
     "dependencies": {
-        "@tna/di": "^0.0.0",
-        "@tna/logger": "^0.0.0",
+        "@hacker-und-koch/di": "0.0.1",
+        "@hacker-und-koch/logger": "0.0.1",
         "reflect-metadata": "^0.1.13"
     },
     "devDependencies": {

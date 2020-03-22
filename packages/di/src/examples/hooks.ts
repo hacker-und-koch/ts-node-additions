@@ -7,7 +7,7 @@ import {
     OnDestroy,
     bootstrap
 } from '../lib';
-import { delay, infinite } from '@tna/util';
+import { delay, infinite } from '@hacker-und-koch/util';
 
 
 @Injectable()

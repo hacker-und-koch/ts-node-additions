@@ -1,6 +1,6 @@
 import { Providers } from './providers';
-import { GetOptConfiguration } from '@tna/getopt';
-import { Logger, Loglevel } from '@tna/logger';
+import { GetOptConfiguration } from '@hacker-und-koch/getopt';
+import { Logger, Loglevel } from '@hacker-und-koch/logger';
 
 export interface BootstrapOptions {
     log?: Loglevel | { [className: string]: Loglevel };

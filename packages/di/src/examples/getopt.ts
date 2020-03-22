@@ -5,7 +5,7 @@ import {
     Argument,
     CommandState,
 } from '../lib';
-import { GetOpt } from '@tna/getopt';
+import { GetOpt } from '@hacker-und-koch/getopt';
 
 
 @Application({

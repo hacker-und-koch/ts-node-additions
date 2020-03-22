@@ -1,6 +1,6 @@
 {
-    "name": "@tna/getopt",
-    "version": "0.0.0",
+    "name": "@hacker-und-koch/getopt",
+    "version": "0.0.1",
     "description": "",
     "main": "bin/index.js",
     "types": "declarations/index.js",

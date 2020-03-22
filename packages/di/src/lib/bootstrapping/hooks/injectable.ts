@@ -1,5 +1,5 @@
 import { Configuration } from "../configurations";
-import { GetOptOption } from "@tna/getopt";
+import { GetOptOption } from "@hacker-und-koch/getopt";
 
 export declare class IInjectable {
     __tna_di_provides__?: string;

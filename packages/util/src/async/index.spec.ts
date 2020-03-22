@@ -21,8 +21,8 @@ describe("Asnyc", () => {
             .then(ms => {
                 const post = Date.now();
                 expect(ms).toBe(delay);
-                expect(post - pre).toBeLessThan(delay + 5);
-                expect(post - pre).toBeGreaterThan(delay - 5);
+                expect(post - pre).toBeLessThan(delay + 50);
+                expect(post - pre).toBeGreaterThan(delay - 50);
                 done();
             });
     });
