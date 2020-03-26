@@ -1,16 +1,16 @@
-import { Logger } from './index'
+import { Logger, FormatFunction } from './index'
+import { LoggerPackage } from './lib';
+
+const formatFunction: FormatFunction = (pkg: LoggerPackage): Buffer | string => {
+    const argsAsString = pkg.parts
+        .map(arg => arg.toString())
+        .join('+++');
+    return `[${pkg.class}] ${argsAsString}\n`;
+}
 
 const logger: Logger = Logger.build()
-    .className('main')
-    .level('spam')
+    .className('MyClass')
+    .format(formatFunction)
     .create();
 
-logger.spam('first');
-
-logger.info('supporting', { 'node-style': "JSON", "pr": 1, "nting": ["!"] });
-
-logger.log('Hi, planet!');
-
-logger.warn('There will be an error now');
-
-logger.error(new Error('Actually not that bad.'));
+logger.log('lorem', 'ipsum');

@@ -6,4 +6,5 @@ export interface LoggerPackage {
     id: string;
     parts: any[];
     formatedParts?: string;
+    time: number;
 }

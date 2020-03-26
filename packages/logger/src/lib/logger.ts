@@ -35,7 +35,7 @@ export class Logger {
         const idxOptions = this.logLevels.indexOf(this.activeLogLevel);
 
         if (idxPackage >= idxOptions) {
-            const stream = loggerPackage.level === "error" ? this.stderr : this.stdout;
+            const stream = /(warning|error)/.test(loggerPackage.level) ? this.stderr : this.stdout;
             return stream.write(this.format(loggerPackage));
         }
 
@@ -47,7 +47,8 @@ export class Logger {
             level: "spam",
             class: this.className,
             id: this.id,
-            parts: args
+            parts: args,
+            time: Date.now(),
         });
     }
 
@@ -56,7 +57,8 @@ export class Logger {
             level: "info",
             class: this.className,
             id: this.id,
-            parts: args
+            parts: args,
+            time: Date.now(),
         });
     }
 
@@ -65,7 +67,8 @@ export class Logger {
             level: "log",
             class: this.className,
             id: this.id,
-            parts: args
+            parts: args,
+            time: Date.now(),
         });
     }
 
@@ -74,7 +77,8 @@ export class Logger {
             level: "warn",
             class: this.className,
             id: this.id,
-            parts: args
+            parts: args,
+            time: Date.now(),
         });
     }
 
@@ -83,17 +87,17 @@ export class Logger {
             level: "error",
             class: this.className,
             id: this.id,
-            parts: args
+            parts: args,
+            time: Date.now(),
         });
     }
 
     static build() {
         return new LoggerBuilder();
     }
-
 }
 
-class LoggerBuilder {
+export class LoggerBuilder {
     private _className: string;
     private _id: string;
     private _level: Loglevel;
@@ -102,6 +106,12 @@ class LoggerBuilder {
     private _stderr: NodeJS.WriteStream;
     private _noTimestamp: boolean;
 
+    /**
+     * Set ID of instance. Is utilized by di package.
+     * 
+     * @param id    ID of instance to be used when 
+     *              formatting log output.
+     */
     id(id: string): this {
         if (typeof this._id !== "undefined") {
             throw new Error("'id' already set for Logger.")
@@ -111,6 +121,12 @@ class LoggerBuilder {
         return this;
     }
 
+    /**
+     * Set class name to be used when formatting log output.
+     * 
+     * (( manditory! ))
+     * @param {string} className    Class name used when formatting log output.
+     */
     className(className: string): this {
         if (typeof this._className !== "undefined") {
             throw new Error("'className' already set for Logger.")
@@ -120,6 +136,12 @@ class LoggerBuilder {
         return this;
     }
 
+    /**
+     * Set threshold level for Logger. Only logs with level of 
+     *  equal or greater importance to this value will be printed.
+     * 
+     * @param level     Threshold level for Logger
+     */
     level(level: Loglevel): this {
         if (typeof this._level !== "undefined") {
             throw new Error("'level' already set for Logger.")
@@ -129,7 +151,12 @@ class LoggerBuilder {
         return this;
     }
 
-    format(format: (pkg: LoggerPackage) => string | Buffer): this {
+    /**
+     * Set Logger's `FormatFunction`.
+     * 
+     * @param format    Mapping function to format log lines
+     */
+    format(format: FormatFunction): this {
         if (typeof this._format !== "undefined") {
             throw new Error("'format' already set for Logger.")
         }
@@ -138,6 +165,11 @@ class LoggerBuilder {
         return this;
     }
 
+    /**
+     * `WriteStream` used for levels `'spam'`, `'info'` and `'log'`.
+     * 
+     * @param stream    stdout stream
+     */
     stdout(stream: NodeJS.WriteStream): this {
         if (typeof this._stdout !== "undefined") {
             throw new Error("'stdout' already set for Logger.")
@@ -146,7 +178,11 @@ class LoggerBuilder {
 
         return this;
     }
-
+    /**
+     * `WriteStream` used for levels `'warning'` and `'error'`.
+     * 
+     * @param stream    stdout stream
+     */
     stderr(stream: NodeJS.WriteStream): this {
         if (typeof this._stderr !== "undefined") {
             throw new Error("'stderr' already set for Logger.")
@@ -156,13 +192,20 @@ class LoggerBuilder {
         return this;
     }
 
+    /**
+     * If called: Logger's formating function will not include a timestamp
+     */
     noTimestamp(): this {
         this._noTimestamp = true;
 
         return this;
     }
 
-
+    /**
+     * Calling this function will finish the building process. 
+     * A new instance of `Logger` will be created and configured
+     * according to the `LoggerBuilder`'s state.
+     */
     create() {
         if (typeof this._className === "undefined") {
             throw new Error("'className' not set. Please call '.className()' before calling '.create()'.");
@@ -208,7 +251,7 @@ class LoggerBuilder {
                 .map((line: string): string => {
                     const lvlPart = this.defaultLevelToChars(pkg.level);
                     const idPart = pkg.id ? `[${pkg.id}]` : '';
-                    const timePart = this._noTimestamp ? '' : this.defaultTimestamp();
+                    const timePart = this._noTimestamp ? '' : this.defaultTimestamp(pkg.time);
                     const timeUntilClass = `${timePart}${lvlPart}${pkg.class}${idPart}: `;
                     let formatedLine = line + '\n';
                     if (windowX > 0) {
@@ -237,8 +280,8 @@ class LoggerBuilder {
         }
     }
 
-    private defaultTimestamp(): string {
-        return new Date(Date.now()).toISOString();
+    private defaultTimestamp(now: number): string {
+        return new Date(now).toISOString();
     }
 
     private defaultLevelToChars(level: Loglevel): string {
