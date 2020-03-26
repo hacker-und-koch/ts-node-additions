@@ -58,11 +58,13 @@ export class Providers {
         const ownLogClassName = 'Providers';
         const ownLogLevel = this.logLevelOf(ownLogClassName);
 
+        
         this.logger = Logger.build()
             .className(ownLogClassName)
             .level(ownLogLevel)
             .create();
 
+        this.logger.info('Created new instance of Logger for Providers.')
         this.instances.push({
             consumes: [],
             id: null,
@@ -73,9 +75,10 @@ export class Providers {
     }
 
     createGetOpt(options: GetOptConfiguration) {
+        this.logger.info('Creating new instance of GetOpt');
+
         let getopt = new GetOpt(options);
         this.getopt = getopt;
-
         this.instances.push({
             consumes: [],
             id: null,
@@ -88,11 +91,6 @@ export class Providers {
     async setupShutdownHook() {
         let shutting_down = false;
 
-        // keeps terminal session active
-        if ('resume' in process.stdin) {
-            process.stdin.resume();
-        }
-
         process.once('SIGTERM', () => {
             this.logger.info('SIGTERM');
             callShutdown();
@@ -104,17 +102,17 @@ export class Providers {
         });
 
         // catches "kill pid" (for example: nodemon restart)
-        process.on('SIGUSR1', () => {
+        process.once('SIGUSR1', () => {
             this.logger.info('SIGUSR1');
             callShutdown();
         });
-        process.on('SIGUSR2', () => {
+        process.once('SIGUSR2', () => {
             this.logger.info('SIGUSR2');
             callShutdown();
         });
 
         //catches uncaught exceptions
-        process.on('uncaughtException', (err) => {
+        process.once('uncaughtException', (err) => {
             this.logger.error(err);
             this.logger.warn('Shutting down because of error.')
             callShutdown(1);
@@ -122,6 +120,11 @@ export class Providers {
         const self = this;
 
         function callShutdown(code = 0) {
+
+            // keeps terminal session active
+            if ('resume' in process.stdin) {
+                process.stdin.resume();
+            }
 
             if (shutting_down) {
                 self.logger.warn(`Ignoring shutdown call! Already shutting down`);
@@ -442,7 +445,7 @@ export class Providers {
         if (!template.__tna_di_decorated__) {
             throw new Error(`'${template}' is not injecable! Decorate with @Injectable() to fix this.`)
         }
-        
+
         const templ_name = template.__tna_di_provides__;
         const prev_idx = this.templates.findIndex(templ => templ_name == templ.provides)
         if (prev_idx > -1) {
@@ -450,9 +453,9 @@ export class Providers {
             this.templates.splice(prev_idx, 1);
         }
         const configs = template.__tna_di_configs__ || [];
-        
+
         this.registerConfigs(configs);
-        
+
         this.logger.spam(`Registering ${templ_name} as declared by ${caller}`);
         this.templates.push({
             template: template,
@@ -461,7 +464,7 @@ export class Providers {
             multiIds: [],
             declaredBy: caller
         });
-        
+
         const declarations = template.__tna_di_declarations__ || [];
         if (declarations.length) {
             this.logger.spam(`Evaluating declarations of ${templ_name}`);
