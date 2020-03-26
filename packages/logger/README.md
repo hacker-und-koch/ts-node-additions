@@ -48,7 +48,7 @@ logger.error('amet');
 
 
 ## Line Formatting
-### Default formatting ([example](./examples/basic-logger.ts))
+### Default formatting ([example](./src/examples/basic-logger.ts))
 Above examples will print
 ```log
 2020-01-02T03:04:50.001Z  -  MyClass: lorem
