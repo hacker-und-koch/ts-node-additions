@@ -1,4 +1,11 @@
 # TS Node Additions
+## Maintained Packages
+
+* [logger](./packages/logger)
+* [getopt](./packages/getopt)
+* [util](./packages/util)
+* [dependency-injection](./packages/di)
+* [http](./packages/http)
 
 ## System Requirements
 * NodeJS
