@@ -1,4 +1,11 @@
 # TS Node Additions
+## Maintained Packages
+
+* [logger](./packages/logger)
+* [getopt](./packages/getopt)
+* [util](./packages/util)
+* [dependency-injection](./packages/di)
+* [http](./packages/http)
 
 ## System Requirements
 * NodeJS
@@ -33,6 +40,13 @@ OR
 $ yarn start:watch
 ```
 ### Releases
+#### pre requirements
 ```
-$ yarn release
+$ npm adduser
+```
+#### apply new version and publish packages
+```
+$ git checkout master
+$ git merge --no-ff develop
+$ node .run.js release
 ```
