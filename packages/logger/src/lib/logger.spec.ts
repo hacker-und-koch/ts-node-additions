@@ -14,20 +14,21 @@ describe("Logger", () => {
 
         logger.spam("spam");
 
-        expect(spies.onlog).toHaveBeenCalledWith({
-            class: "test",
-            id: "case",
-            level: "spam",
-            parts: ["spam"]
-        });
-        
-        expect(spies.format).toHaveBeenCalledWith({
-            class: "test",
-            id: "case",
-            level: "spam",
-            parts: ["spam"]
-        });
-        
+        const formatArg: LoggerPackage = spies.format.calls.mostRecent().args[0] as LoggerPackage;
+        const onlogArg: LoggerPackage = spies.format.calls.mostRecent().args[0] as LoggerPackage;
+
+        expect(onlogArg.class).toEqual("test");
+        expect(onlogArg.id).toEqual("case");
+        expect(onlogArg.level).toEqual("spam");
+        expect(onlogArg.parts).toEqual(["spam"]);
+        expect(onlogArg.time).toBeInstanceOf(Number);
+
+        expect(formatArg.class).toEqual("test");
+        expect(formatArg.id).toEqual("case");
+        expect(formatArg.level).toEqual("spam");
+        expect(formatArg.parts).toEqual(["spam"]);
+        expect(formatArg.time).toBeInstanceOf(Number);
+
         expect(spies.writeOut).toHaveBeenCalled();
     });
 
@@ -35,26 +36,29 @@ describe("Logger", () => {
         const { logger, spies } = createTestLoggerAndSpies();
 
         logger.spam("spam");
+        
+        const onlogArg: LoggerPackage = spies.format.calls.mostRecent().args[0] as LoggerPackage;
 
-        expect(spies.onlog).toHaveBeenCalledWith({
-            class: "test",
-            id: "case",
-            level: "spam",
-            parts: ["spam"]
-        });
+        expect(onlogArg.class).toEqual("test");
+        expect(onlogArg.id).toEqual("case");
+        expect(onlogArg.level).toEqual("spam");
+        expect(onlogArg.parts).toEqual(["spam"]);
+        expect(onlogArg.time).toBeInstanceOf(Number);
+        
     });
 
     it("creates log package for level 'info'.", () => {
         const { logger, spies } = createTestLoggerAndSpies();
 
-        logger.spam("spam");
+        logger.info("info");
 
-        expect(spies.onlog).toHaveBeenCalledWith({
-            class: "test",
-            id: "case",
-            level: "spam",
-            parts: ["spam"]
-        });
+        const onlogArg: LoggerPackage = spies.format.calls.mostRecent().args[0] as LoggerPackage;
+
+        expect(onlogArg.class).toEqual("test");
+        expect(onlogArg.id).toEqual("case");
+        expect(onlogArg.level).toEqual("info");
+        expect(onlogArg.parts).toEqual(["info"]);
+        expect(onlogArg.time).toBeInstanceOf(Number);
     });
 
     it("creates log package for level 'log'.", () => {
@@ -62,12 +66,13 @@ describe("Logger", () => {
 
         logger.log("log");
 
-        expect(spies.onlog).toHaveBeenCalledWith({
-            class: "test",
-            id: "case",
-            level: "log",
-            parts: ["log"]
-        });
+        const onlogArg: LoggerPackage = spies.format.calls.mostRecent().args[0] as LoggerPackage;
+
+        expect(onlogArg.class).toEqual("test");
+        expect(onlogArg.id).toEqual("case");
+        expect(onlogArg.level).toEqual("log");
+        expect(onlogArg.parts).toEqual(["log"]);
+        expect(onlogArg.time).toBeInstanceOf(Number);
     });
 
     it("creates log package for level 'warn'.", () => {
@@ -75,12 +80,13 @@ describe("Logger", () => {
 
         logger.warn("warn");
 
-        expect(spies.onlog).toHaveBeenCalledWith({
-            class: "test",
-            id: "case",
-            level: "warn",
-            parts: ["warn"]
-        });
+        const onlogArg: LoggerPackage = spies.format.calls.mostRecent().args[0] as LoggerPackage;
+
+        expect(onlogArg.class).toEqual("test");
+        expect(onlogArg.id).toEqual("case");
+        expect(onlogArg.level).toEqual("warn");
+        expect(onlogArg.parts).toEqual(["warn"]);
+        expect(onlogArg.time).toBeInstanceOf(Number);
     });
 
     it("creates log package for level 'error'.", () => {
@@ -88,12 +94,13 @@ describe("Logger", () => {
 
         logger.error("error");
 
-        expect(spies.onlog).toHaveBeenCalledWith({
-            class: "test",
-            id: "case",
-            level: "error",
-            parts: ["error"]
-        });
+        const onlogArg: LoggerPackage = spies.format.calls.mostRecent().args[0] as LoggerPackage;
+
+        expect(onlogArg.class).toEqual("test");
+        expect(onlogArg.id).toEqual("case");
+        expect(onlogArg.level).toEqual("error");
+        expect(onlogArg.parts).toEqual(["error"]);
+        expect(onlogArg.time).toBeInstanceOf(Number);
     });
 
     it("can be built with default formatter", () => {
@@ -101,7 +108,7 @@ describe("Logger", () => {
 
         expect(logger.spam('moin')).toBeTruthy();
         expect(spies.writeOut as any).toHaveBeenCalledWith('  -  test[case]: moin\n');
-        
+
         logger.warn(JSON.stringify({ 'x': 'y', 'z': 42 }, null, 4));
         expect(spies.writeOut as any).toHaveBeenCalledWith(
             ' [x] test[case]: {\n' +
