@@ -48,5 +48,5 @@ $ npm adduser
 ```
 $ git checkout master
 $ git merge --no-ff develop
-$ node .run.js release
+$ node .run.js release  # not npm beacause of reasons.
 ```
