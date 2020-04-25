@@ -95,8 +95,8 @@ async function run(argv, debug) {
 
         console.log('++ commiting and pushing changes');
         await git(['add', './package.json', ...WORKSPACES.map(ws => `${ws}/package.json`)]);
-        await git(['commit', '-m', `'release: ${VERSION}'`]);
-        await git(['tag', `release-${VERSION}`]);
+        await git(['commit', '-m', `'release: ${newVersion}'`]);
+        await git(['tag', `release-${newVersion}`]);
         await git(['push', '--tags']);
 
 
