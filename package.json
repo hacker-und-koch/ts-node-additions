@@ -18,6 +18,7 @@
     "packages/logger",
     "packages/util",
     "packages/di",
+    "packages/eventbus",
     "packages/http"
   ]
 }
