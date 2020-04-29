@@ -1,6 +1,6 @@
 {
     "name": "@hacker-und-koch/eventbus",
-    "version": "0.0.4",
+    "version": "0.0.5",
     "description": "",
     "main": "bin/index.js",
     "types": "declarations/index.js",
@@ -18,8 +18,8 @@
     },
     "license": "LGPL-3.0",
     "dependencies": {
-        "@hacker-und-koch/di": "^0.0.4",
-        "@hacker-und-koch/logger": "^0.0.4",
+        "@hacker-und-koch/di": "0.0.5",
+        "@hacker-und-koch/logger": "0.0.5",
         "reflect-metadata": "^0.1.13",
         "rxjs": "^6.5.5"
     },
