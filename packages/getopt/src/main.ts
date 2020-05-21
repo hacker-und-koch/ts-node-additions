@@ -159,14 +159,14 @@ const fsArgs = [{
 
 console.log('1', new GetOpt({
     options: [{ 'long': 'rec', 'short': 'R' }],
-    args: fsArgs,
+    // args: fsArgs,
     argv: ['_0', '_1', 'mv', 'from here', 'to there'],
     env: {}
 }).posTree);
 
 const go0 = new GetOpt({
     options: [{ 'long': 'rec', 'short': 'R' }],
-    args: fsArgs,
+    // args: fsArgs,
     argv: ['_0', '_1', 'ls', '/some/file1', '/some/more/file*'],
     env: {}
 });
@@ -174,7 +174,7 @@ console.log('2', go0.posTree);
 
 console.log('3', new GetOpt({
     options: [{ 'long': 'rec', 'short': 'R' }],
-    args: fsArgs,
+    // args: fsArgs,
     argv: ['_0', '_1', 'chmod', '-R', 'u+x', 'file1', 'file2', '-h'],
     env: {}
 }).posTree);
