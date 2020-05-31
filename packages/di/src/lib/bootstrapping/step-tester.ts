@@ -1,13 +1,12 @@
-import { Providers } from "./providers";
+import { Providers, LoglevelOption } from "./providers";
 import { IApplication } from "./hooks/injectable";
 import { Injectable } from "../decorators";
-import { Loglevel } from "@hacker-und-koch/logger";
 
 export interface StepTesterOptions {
     configurations?: any[];
     declarations?: any[];
     options?: { [long_opt: string]: string };
-    loglevel?: Loglevel;
+    loglevel?: LoglevelOption;
 }
 export class StepTester<T> {
     instance: T;
@@ -25,7 +24,7 @@ export class StepTester<T> {
 
         this.providers = new Providers({
             configurations: options.configurations,
-            // logger: new ConsoleLogger(options.loglevel || "warn")
+            loglevels: options.loglevel,
         });
 
         this.providers.register(target, 'StepTester');

@@ -5,8 +5,10 @@ import { BootstrapPhaseError, MissingDeclarationError, MissingConfigurationError
 import { IInjectable, IApplication } from './hooks/injectable';
 import { Logger, Loglevel } from '@hacker-und-koch/logger';
 
+export type LoglevelOption = Loglevel | { [className: string]: Loglevel };
+
 export interface ProviderOptions {
-    loglevels?: { [classIdentifier: string]: Loglevel };
+    loglevels?: LoglevelOption;
     configurations?: Configuration<any>[];
 }
 
@@ -58,7 +60,6 @@ export class Providers {
         const ownLogClassName = 'Providers';
         const ownLogLevel = this.logLevelOf(ownLogClassName);
 
-        
         this.logger = Logger.build()
             .className(ownLogClassName)
             .level(ownLogLevel)
@@ -495,7 +496,7 @@ export class Providers {
         return new target(...args);
     }
 
-    static formatLogLevels(input: Loglevel | { [className: string]: Loglevel }): { [classIdentifier: string]: Loglevel } {
+    static formatLogLevels(input: LoglevelOption): { [classIdentifier: string]: Loglevel } {
         if (typeof input === 'string') {
             return {
                 '*': input,
@@ -519,6 +520,6 @@ export class Providers {
     }
 
     private logLevelOf(classIdentifier: string): Loglevel {
-        return Providers.logLevelIn(classIdentifier, this.options.loglevels);
+        return Providers.logLevelIn(classIdentifier, this.options.loglevels as {[key: string]: Loglevel});
     }
 }
