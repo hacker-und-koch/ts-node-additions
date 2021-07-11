@@ -7,14 +7,15 @@ on:
       increase:
         description: "Version increase. Should be 'major', 'minor' or 'patch'"
         required: true
-        default: 'minor'
+        default: 'patch'
 
 jobs:
   prepareAndRelease:
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
     steps:
      - uses: actions/checkout@v2
-      
      - name: Cache node modules
        uses: actions/cache@v2
        env:
@@ -31,7 +32,14 @@ jobs:
        uses: actions/setup-node@v1
        with:
          node-version: ${{ matrix.node-version }}
+         registry-token: ${{ secrets.NODE_AUTH_TOKEN }}
      - run: yarn install --frozen-lockfile --cache --prefer-offline
      - run: yarn build
      - run: yarn test
-     - run: node .run.js release ${{ github.event.inputs.increase }}
+     - run: node .run.js version ${{ github.event.inputs.increase }}
+     - run: git add ./*/package.json
+     - run: git commit -m 'Release'
+     - run: git checkout master
+     - run: git merge --no-ff -m 'Release' develop
+     - run: node .run.js release
+     - run: git push origin

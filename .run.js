@@ -52,8 +52,12 @@ async function run(argv, debug) {
         case "test":
             await test(argv.map(arg => `packages/${arg}`));
             break;
+        case "version":
+            await version();
+            break;
         case "release":
             await release();
+            break;
     }
 
     return command;
@@ -69,44 +73,24 @@ async function run(argv, debug) {
         return runCommandInWorkspaces('yarn', 'test', workspaces);
     }
 
-    async function release() {
-        // await yarn(['install', '--ci']);
-
-        // console.log('++ building packages');
-        // await build();
-
-        // console.log('++ testing packages');
-        // await test();
-
+    async function version() {
         console.log('++ determining new version');
         const newVersion = await getVersion(argv[0]);
 
         console.log('++ checking out release branch');
-        await git(['checkout', 'release']);
+        // await git(['checkout', 'release']);
         console.log('++ merging master branch')
-        await git(['merge', '--no-ff', '-m', `'release: ${newVersion}'`, 'master']);
+        // await git(['merge', '--no-ff', '-m', `'release: ${newVersion}'`, 'master']);
 
         console.log('++ spreading version to packages');
         await spreadVersionToDependencies(newVersion);
 
         console.log('++ commiting and pushing changes');
-        await git(['add', './package.json', ...WORKSPACES.map(ws => `${ws}/package.json`)]);
-        await git(['commit', '-m', `'version: increase packages to ${newVersion}'`]);
         await yarn(['version', '--new-version', newVersion]);
-        // await git(['push']);
+    }
 
-        console.log('++ merging release into master');
-        await git(['checkout', 'master']);
-        await git(['merge', '--no-ff', '-m', `'merge: after release ${newVersion}'`, 'release']);
-        // await git(['push']);
-
-        console.log('++ merging master into develop');
-        await git(['checkout', 'develop']);
-        await git(['merge', '--no-ff', '-m', `'merge: after release ${newVersion}'`, 'master']);
-        // await git(['push']);
-
-        console.log('++ push tags');
-        // await git(['push', '--tags']);
+    async function release() {
+        await runCommandInWorkspaces('npm', ['publish', '--access', 'public']);
     }
 
     async function runCommandInWorkspaces(command, args, workspaces = [...WORKSPACES]) {
