@@ -91,14 +91,12 @@ async function run(argv, debug) {
 
         console.log('++ publishing packages via npm');
         await runCommandInWorkspaces('npm', ['publish', '--access', 'public']);
-        await yarn(['version', '--new-version', newVersion]);
-
+        
         console.log('++ commiting and pushing changes');
         await git(['add', './package.json', ...WORKSPACES.map(ws => `${ws}/package.json`)]);
-        await git(['commit', '-m', `'release: ${newVersion}'`]);
-        await git(['tag', `release-${newVersion}`]);
-        await git(['push', '--tags']);
-
+        await git(['commit', '-m', `'version: increase packages to ${newVersion}'`]);
+        await yarn(['version', '--new-version', newVersion]);
+        await git(['push']);
 
         console.log('++ merging release into master');
         await git(['checkout', 'master']);
@@ -109,6 +107,9 @@ async function run(argv, debug) {
         await git(['checkout', 'develop']);
         await git(['merge', '--no-ff', '-m', `'merge: after release ${newVersion}'`, 'master']);
         await git(['push']);
+
+        console.log('++ push tags');
+        await git(['push', '--tags']);
     }
 
     async function runCommandInWorkspaces(command, args, workspaces = [...WORKSPACES]) {
