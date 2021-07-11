@@ -42,7 +42,7 @@ jobs:
      - run: node .run.js version ${{ github.event.inputs.increase }}
      - run: git add ./*/package.json
      - run: git commit -m 'Release'
-     - run: git checkout master
+     - run: git checkout origin master
      - run: git merge --no-ff -m 'Release' develop
      - run: node .run.js release
      - run: git push origin
