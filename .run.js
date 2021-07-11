@@ -70,16 +70,16 @@ async function run(argv, debug) {
     }
 
     async function release() {
-        await yarn(['install', '--ci']);
+        // await yarn(['install', '--ci']);
 
-        console.log('++ building packages');
-        await build();
+        // console.log('++ building packages');
+        // await build();
 
-        console.log('++ testing packages');
-        await test();
+        // console.log('++ testing packages');
+        // await test();
 
         console.log('++ determining new version');
-        const newVersion = await getVersion();
+        const newVersion = await getVersion(argv[0]);
 
         console.log('++ checking out release branch');
         await git(['checkout', 'release']);
@@ -89,27 +89,24 @@ async function run(argv, debug) {
         console.log('++ spreading version to packages');
         await spreadVersionToDependencies(newVersion);
 
-        console.log('++ publishing packages via npm');
-        await runCommandInWorkspaces('npm', ['publish', '--access', 'public']);
-        
         console.log('++ commiting and pushing changes');
         await git(['add', './package.json', ...WORKSPACES.map(ws => `${ws}/package.json`)]);
         await git(['commit', '-m', `'version: increase packages to ${newVersion}'`]);
         await yarn(['version', '--new-version', newVersion]);
-        await git(['push']);
+        // await git(['push']);
 
         console.log('++ merging release into master');
         await git(['checkout', 'master']);
         await git(['merge', '--no-ff', '-m', `'merge: after release ${newVersion}'`, 'release']);
-        await git(['push']);
+        // await git(['push']);
 
         console.log('++ merging master into develop');
         await git(['checkout', 'develop']);
         await git(['merge', '--no-ff', '-m', `'merge: after release ${newVersion}'`, 'master']);
-        await git(['push']);
+        // await git(['push']);
 
         console.log('++ push tags');
-        await git(['push', '--tags']);
+        // await git(['push', '--tags']);
     }
 
     async function runCommandInWorkspaces(command, args, workspaces = [...WORKSPACES]) {
@@ -175,9 +172,9 @@ async function run(argv, debug) {
     }
 
 
-    async function getVersion() {
+    async function getVersion(increase) {
         console.log(`Current version is ${VERSION}.`)
-        let validAnswer;
+        let validAnswer = increase;
 
         while (!validAnswer) {
             const answer = await question(`Please select 'major', 'minor' or 'patch': `);
@@ -191,7 +188,7 @@ async function run(argv, debug) {
         const newVersion = raiseVersion(VERSION, validAnswer);
         console.log(`This results in jump from >> ${VERSION} << to >> ${newVersion} <<.`);
 
-        const yN = await yesNo(`Continue with ${newVersion}?`);
+        const yN = increase ? 'y' : await yesNo(`Continue with ${newVersion}?`);
 
         if (yN === 'n') {
             throw new Error('User aborted.');
