@@ -10,29 +10,67 @@ export class GetOpt {
             positionalArgs: [],
         },
         private argv: string[] = processArgv,
+        private processEnv: { [key: string]: string } = { ...process.env },
     ) {
+        if (!this.config.options) {
+            this.config.options = [];
+        }
         if (!this.config.positionalArgs) {
             this.config.positionalArgs = [];
         }
+
+        if (!this.config.noAutoHelp) {
+            this.config.options.push({
+                long: 'help',
+                short: 'h',
+                type: 'boolean',
+                description: 'Print usage text.'
+            });
+        }
+
         this.evaluateArgs();
+
+        if (!this.config.noAutoHelp && this.option('help')) {
+            if (this.config.onPrintUsage) {
+                this.config.onPrintUsage(this.usage);
+            } else {
+                console.log(this.usage);
+                process.exit(0);
+            }
+        }
     }
 
     private argumentsCollector: string[] = [];
     private optionsCollector: OptionsResult[] = [];
 
+    /**
+     * Very first argument in argv. 
+     * Usually full path binary that 
+     * is called (e.g. /usr/bin/node). 
+     */
     public get $0(): string {
         return this.argv[0];
     }
-
+    /**
+     * Second argument in argv.
+     * Usually full path to executed file.
+     * (e.g. /home/foo/project/example.js)
+     */
     public get $1(): string {
         return this.argv[1];
     }
 
+    /**
+     * Unparsed list of arguments but with 
+     * the first two elements removed.
+     */
     public get rawArgs(): string[] {
-        console.log(this.argv);
         return this.argv.slice(2);
     }
 
+    /**
+     * Bundled summary of parser results.
+     */
     public get result() {
         return {
             $0: this.$0,
@@ -42,16 +80,49 @@ export class GetOpt {
         };
     }
 
+    /** 
+     * Positional arguments. This will only
+     * contain the elements, that were not 
+     * recognized as an option or its value.
+     */
     public get arguments(): string[] {
         return this.argumentsCollector.slice();
     }
 
+    /**
+     * Get full list of the options and their 
+     * values that were found parsing argv.
+     */
     public get options(): OptionsResult[] {
         // deep copy collector for safety reasons
         return this.optionsCollector
             .map(opt => ({ ...opt }));
     }
 
+    /**
+     * Get results for a single option.
+     * @param name long option name (e.g. 'foo' for '--foo')
+     */
+    public option(name: string): OptionsResult | undefined {
+        return this.options.find(opt => opt.label === name);
+    }
+
+    /**
+     * Get results for a single option
+     * by passing its short option key.
+     * @param char short option char (e.g. 'k' for '-k')
+     */
+    public shortOption(char: string): OptionsResult | undefined {
+        return this.options.find(opt =>
+            this.config.options.find(o =>
+                o.short === char
+            )?.long === opt.label
+        );
+    }
+
+    /**
+     * Parse and return usage text.
+     */
     public get usage(): string {
         const appName = this.config.appName || this.$1.split('/').reverse()[0];
         const optionsPart = this.config.options.length ? ' [options...]' : '';
@@ -67,7 +138,7 @@ export class GetOpt {
                 nextPart += ` [${cur.name}${multiArg}]`;
             }
             return acc + nextPart;
-        },  '');
+        }, '');
         let usage = `Usage: ${appName}${optionsPart}${argPart}`;
         for (let opt of this.config.options) {
             usage += `\n`;
@@ -77,11 +148,15 @@ export class GetOpt {
                 optAndValue += ` <${opt.valueName || 'value'}>`;
             }
             usage += `--${optAndValue}${optAndValue.length < 14 ? '\t ' : ' '}`;
+            usage += `${opt.description || ''}`;
         }
         return usage;
     }
 
-
+    /**
+     * Initialize self and parse args based 
+     * on provided config and argv.
+     */
     private evaluateArgs() {
         this.resetState();
 
@@ -205,7 +280,7 @@ export class GetOpt {
                                 collectingOptionFor = opt;
                             }
                         } else {
-                            console.log('unhandled char:', char, 'in chunk:', arg);
+                            console.error('Unhandled char:', char, 'in chunk:', arg);
                         }
                     }
                 }
@@ -213,12 +288,53 @@ export class GetOpt {
             }
             this.argumentsCollector.push(arg);
         }
+
+        const notProvidedOptionsWithEnvAlias = this.config.options
+            .filter(opt => 'envAlias' in opt && !this.options.find(o =>
+                o.label === opt.long
+            ));
+
+        for (let opt of notProvidedOptionsWithEnvAlias) {
+            if (opt.envAlias in this.processEnv) {
+                let value: boolean | string | string[];
+                switch (opt.type) {
+                    case 'boolean':
+                        value = true;
+                        break;
+                    case 'string':
+                        value = this.processEnv[opt.envAlias];
+                        break;
+                    case 'array':
+                        value = [this.processEnv[opt.envAlias]];
+                        break;
+                }
+
+                this.optionsCollector.push({
+                    label: opt.long,
+                    type: opt.type,
+                    value,
+                } as OptionsResult);
+            }
+        }
+
+        const notProvidedOptionsWithDefault = this.config.options
+            .filter(opt => 'default' in opt && !this.options.find(o =>
+                o.label === opt.long
+            ));
+        for (let opt of notProvidedOptionsWithDefault) {
+            this.optionsCollector.push({
+                label: opt.long,
+                type: opt.type,
+                value: opt.default,
+            } as OptionsResult);
+        }
     }
 
+    /**
+     * Initilize inner collectors.
+     */
     private resetState() {
         this.argumentsCollector.splice(0, this.argumentsCollector.length);
         this.optionsCollector.splice(0, this.optionsCollector.length);
     }
 }
-
-    

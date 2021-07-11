@@ -140,6 +140,7 @@ export class Providers {
                         self.logger.info(`Exiting gracefully`);
                     } else {
                         self.logger.info(`Exiting with errors`);
+                        self.logger.error(...errors);
                     }
                     process.exit(code);
                 });
@@ -153,10 +154,11 @@ export class Providers {
         for (const instance of this.instances as InstancePackage<OnConfigure>[]) {
             if (instance.instance.__tna_di_getopt_options__) {
                 for (let option of instance.instance.__tna_di_getopt_options__) {
-
                     let value: unknown = undefined;
-                    if (option.getOptKey in this.getopt.options) {
-                        value = this.getopt.options[option.getOptKey];
+
+                    const matchingOption = this.getopt.options.find(opt => opt.label === option.getOptKey);
+                    if (matchingOption) {
+                        value = matchingOption.value;
                     } else if ('defaultVal' in option) {
                         value = option.defaultVal;
                     }
@@ -165,38 +167,13 @@ export class Providers {
                     (instance.instance as any)[option.target] = value;
                 }
             }
+
             if (instance.instance.__tna_di_getopt_arguments__) {
                 for (let option of instance.instance.__tna_di_getopt_arguments__) {
-                    this.logger.spam(`setting key '${option.target}' on ${instance.provides} from getopt argument '${option.getOptKey}'`);
-                    let keySplit = option.getOptKey.split('.');
-                    let value = this.getopt.posTree[keySplit.shift()];
+                    this.logger.spam(`setting key '${option.target}' on ${instance.provides} with getopt arguments [${option}]`);
+                    let value = this.getopt.arguments;
 
-                    for (let arg of keySplit) {
-                        if (typeof value !== 'undefined' && typeof value[arg] !== 'undefined') {
-                            value = value[arg];
-                        } else if (typeof option.defaultVal !== 'undefined') {
-                            value = Array.isArray(option.defaultVal) ? [...option.defaultVal] : option.defaultVal;
-                            break;
-                        }
-                    }
                     (instance.instance as any)[option.target] = value;
-                }
-            }
-            if (instance.instance.__tna_di_getopt_commandStates__) {
-                for (let option of instance.instance.__tna_di_getopt_commandStates__) {
-                    this.logger.spam(`setting key '${option.target}' on ${instance.provides} from getopt command state '${option.getOptKey}'`);
-                    let keySplit = option.getOptKey.split('.');
-                    let value = this.getopt.posTree[keySplit.shift()];
-
-                    for (let arg of keySplit) {
-                        if (typeof value !== 'undefined' && typeof value[arg] !== 'undefined') {
-                            value = value[arg];
-                        } else {
-                            value = false;
-                            break;
-                        }
-                    }
-                    (instance.instance as any)[option.target] = typeof value !== 'undefined';
                 }
             }
         }

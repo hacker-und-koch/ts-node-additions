@@ -32,7 +32,6 @@ class Worker implements OnConfigure, OnInit, OnReady, OnDestroy {
         console.log("worker destroy");
         await delay(1000);
     }
-
 }
 
 

@@ -2,54 +2,55 @@ import {
     Application,
     bootstrap,
     Option,
-    Argument,
-    CommandState,
+    Arguments,
 } from '../lib';
 import { GetOpt } from '@hacker-und-koch/getopt';
 
 
 @Application({
     getopt: {
-
+        appName: 'greet-example',
         options: [{
-            long: "greeting",
             type: 'string',
-            default: "hello",
-            short: "g"
+            long: 'greeting',
+            short: 'g',
+            default: 'hello',
+            valueName: 'word',
+            envAlias: 'GETOPT_GREETING'
         }],
-        // args: [{
-        //     name: 'greet',
-        //     command: true,
-        //     info: 'example command argument',
-        //     children: [
-        //         {
-        //             name: 'entity',
-        //             info: 'entity to greet',
-        //         },
-        //     ]
-        // }]
+        positionalArgs: [
+            {
+                name: 'something',
+            }
+        ]
     }
 })
 class App {
 
-    @Option("greeting")
+    @Option('greeting')
     private greeting: string;
 
-    constructor(private getopt: GetOpt) {
-        console.log(`During construction >> greeting: ${this.greeting};`);
-        // console.log(`(Direct access is already possible: ${JSON.stringify(getopt.options)})`);
+    @Arguments()
+    private args: string[];
+
+    constructor(getopt: GetOpt) {
+        // console.log(`Member during construction >> ${this.greeting};`);
+        // console.log(`Access via constructor arg >> ${getopt.option('greeting').value}`);
     }
 
     onConfigure() {
-        console.log(`During configuration >> greeting: ${this.greeting};`);
+        // console.log(`Member during configuration >> ${this.greeting};`);
     }
 
     onReady() {
-        console.log(`${this.greeting} planet!`);
+        const entity = this.args.length ? this.args[0] : 'planet';
+        console.log(` >> ${this.greeting}, ${entity || 'planet'}! <<`);
         if (this.greeting === 'hello') {
             console.log('Try --greeting <word> for more demo.');
+        } else if (entity === 'planet') {
+            console.log('Try --help to explore some more.');
         } else {
-            console.log('Use --help to get more information.');
+            console.log(`Consult ./packages/di/src/examples/getopt.ts for more details.`);
         }
     }
 }
