@@ -2,7 +2,7 @@ name: Release
 on:
   workflow_dispatch:
     needs: build
-    
+
     inputs:
       increase:
         description: "Version increase. Should be 'major', 'minor' or 'patch'"
@@ -12,11 +12,5 @@ on:
 jobs:
   on-success:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
-    - run: echo success
-  on-failure:
-    runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
-    steps:
-      - run: echo failed 
+    - run: node .run.js release ${{ github.event.inputs.increase }}
