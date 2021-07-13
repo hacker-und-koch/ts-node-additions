@@ -1,6 +1,6 @@
 {
     "name": "@hacker-und-koch/util",
-    "version": "0.1.8",
+    "version": "0.1.9",
     "description": "",
     "main": "bin/index.js",
     "types": "declarations/index.d.ts",
