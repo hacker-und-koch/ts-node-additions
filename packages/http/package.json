@@ -1,6 +1,6 @@
 {
     "name": "@hacker-und-koch/http",
-    "version": "0.0.7",
+    "version": "0.1.7",
     "description": "",
     "main": "bin/index.js",
     "types": "declarations/index.js",
@@ -18,8 +18,8 @@
     },
     "license": "LGPL-3.0",
     "dependencies": {
-        "@hacker-und-koch/di": "0.0.7",
-        "@hacker-und-koch/logger": "0.0.7",
+        "@hacker-und-koch/di": "0.1.7",
+        "@hacker-und-koch/logger": "0.1.7",
         "reflect-metadata": "^0.1.13"
     },
     "devDependencies": {
