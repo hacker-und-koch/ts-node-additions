@@ -1,6 +1,6 @@
 {
     "name": "@hacker-und-koch/di",
-    "version": "0.1.9",
+    "version": "0.1.10",
     "description": "",
     "main": "bin/index.js",
     "types": "declarations/index.js",
@@ -23,9 +23,9 @@
     },
     "license": "LGPL-3.0",
     "dependencies": {
-        "@hacker-und-koch/getopt": "0.1.9",
-        "@hacker-und-koch/logger": "0.1.9",
-        "@hacker-und-koch/util": "0.1.9",
+        "@hacker-und-koch/getopt": "0.1.10",
+        "@hacker-und-koch/logger": "0.1.10",
+        "@hacker-und-koch/util": "0.1.10",
         "reflect-metadata": "^0.1.13"
     },
     "devDependencies": {
