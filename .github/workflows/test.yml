@@ -14,7 +14,8 @@ jobs:
     strategy:
       matrix:
         node-version: [16.x]
-
+    env:
+      NPM_TOKEN: ${{ secrets.NPM_READ_TOKEN }}    
     steps:
     - uses: actions/checkout@v2
       
@@ -22,6 +23,7 @@ jobs:
       uses: actions/cache@v2
       env:
         cache-name: cache-node-modules
+
       with:
         # npm cache files are stored in `~/.npm` on Linux/macOS
         path: ~/.npm
@@ -39,5 +41,3 @@ jobs:
     - run: yarn test
       env:
         CI: true
-        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-

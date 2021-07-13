@@ -1,7 +1,6 @@
 ## Own
 bin/
 declarations/
-.npmrc
 
 ## From GitHub:
 *.log
