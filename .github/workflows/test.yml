@@ -22,6 +22,8 @@ jobs:
       uses: actions/cache@v2
       env:
         cache-name: cache-node-modules
+        CI: true
+        NPM_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
       with:
         # npm cache files are stored in `~/.npm` on Linux/macOS
         path: ~/.npm
@@ -37,7 +39,3 @@ jobs:
     - run: yarn install --frozen-lockfile --cache --prefer-offline
     - run: yarn build
     - run: yarn test
-      env:
-        CI: true
-        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
