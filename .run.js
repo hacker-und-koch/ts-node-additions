@@ -77,11 +77,6 @@ async function run(argv, debug) {
         console.log('++ determining new version');
         const newVersion = await getVersion(argv[0]);
 
-        console.log('++ checking out release branch');
-        // await git(['checkout', 'release']);
-        console.log('++ merging master branch')
-        // await git(['merge', '--no-ff', '-m', `'release: ${newVersion}'`, 'master']);
-
         console.log('++ spreading version to packages');
         await spreadVersionToDependencies(newVersion);
 
@@ -248,9 +243,12 @@ async function run(argv, debug) {
         switch (level) {
             case "major":
                 major += 1;
+                minor = 0;
+                patch = 0;
                 break;
             case "minor":
                 minor += 1;
+                patch = 0;
                 break;
             case "patch":
                 patch += 1;
