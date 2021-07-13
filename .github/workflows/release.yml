@@ -16,6 +16,8 @@ jobs:
       pull-requests: write
     steps:
      - uses: actions/checkout@v2
+       with: 
+        fetch-depth: 0
      - name: Cache node modules
        uses: actions/cache@v2
        env:
@@ -34,8 +36,8 @@ jobs:
          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
        with:
          node-version: ${{ matrix.node-version }}
-     - run: git config user.email "you@example.com"
-     - run: git config user.name "Actions Runner"
+     - run: git config user.email "github-actions@github.com"
+     - run: git config user.name "github-actions"
      - run: yarn install --frozen-lockfile --cache --prefer-offline
      - run: yarn build
      - run: yarn test
