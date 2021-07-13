@@ -42,9 +42,10 @@ jobs:
      - run: yarn build
      - run: yarn test
      - run: node .run.js version ${{ github.event.inputs.increase }}
+     - run: git add ./package.json
      - run: git add ./*/package.json
      - run: git commit -m 'Release'
-     - run: git checkout origin release
+     - run: git checkout release
      - run: git merge --no-ff -m 'Release' develop
-     - run: git push origin
+     - run: git push
      - run: node .run.js release
