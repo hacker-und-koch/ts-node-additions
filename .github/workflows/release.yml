@@ -37,16 +37,21 @@ jobs:
          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
        with:
          node-version: ${{ matrix.node-version }}
-     - run: git config user.email "github-actions@github.com"
-     - run: git config user.name "github-actions"
-     - run: yarn install --frozen-lockfile --cache --prefer-offline
-     - run: yarn build
-     - run: yarn test
+     - run: | 
+        git config user.email "github-actions@github.com"
+        git config user.name "github-actions"
+        git checkout release
+        git merge --no-ff -m 'release: merge develop into release'
+     - run: |
+        yarn install --frozen-lockfile --cache --prefer-offline
+        yarn build
+        yarn test
      - run: node .run.js version ${{ github.event.inputs.increase }}
-     - run: git add ./package.json
-     - run: git add ./*/package.json
-     - run: git commit -m 'Release'
-     - run: git checkout release
-     - run: git merge --no-ff -m 'Release' develop
-     - run: git push
+     - run: |
+        git add ./package.json
+        git add ./*/package.json
+        git commit -m 'release: update package.json files'
+        git checkout develop
+        git merge --no-ff -m 'release: merge release into develop'
      - run: node .run.js release
+     - run: git push
