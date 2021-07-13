@@ -41,7 +41,8 @@ jobs:
         git config user.email "github-actions@github.com"
         git config user.name "github-actions"
         git checkout release
-        git merge --no-ff -m 'release: merge develop into release'
+        git pull --squash develop 
+        git commit -m 'release: squash develop into release'
      - run: |
         yarn install --frozen-lockfile --cache --prefer-offline
         yarn build
@@ -51,7 +52,9 @@ jobs:
         git add ./package.json
         git add ./*/package.json
         git commit -m 'release: update package.json files'
-        git checkout develop
-        git merge --no-ff -m 'release: merge release into develop'
      - run: node .run.js release
-     - run: git push
+     - run: |
+        git checkout develop
+        git pull --squash release
+        git commit -m 'release: squashed release back to develop'
+        git push
