@@ -18,8 +18,8 @@
     },
     "license": "LGPL-3.0",
     "dependencies": {
-        "@hacker-und-koch/di": "0.1.9",
-        "@hacker-und-koch/logger": "0.1.9"
+        "@hacker-und-koch/di": "0.1.10",
+        "@hacker-und-koch/logger": "0.1.10"
     },
     "devDependencies": {
         "@types/jasmine": "^3.5.5",
