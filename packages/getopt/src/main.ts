@@ -1,30 +1,12 @@
-import { GetOpt, GetOptOptions } from "./lib";
-
-const opts: GetOptOptions = [
-    { long: 'foo', type: 'array', default: [] },
-    { long: 'bar', type: 'string' },
-    { long: 'opt', type: 'array', short: 'o' },
-    { long: 'opt2', type: 'string', required: true },
-    { long: 'aaa', short: 'a' },
-    { long: 'xxx', short: 'x' },
-    { long: 'yyy', short: 'y' },
-    { long: 'zzz', short: 'z' },
-    { long: 'recursive', short: 'R' },
-    { long: 'na1', type: 'boolean' },
-    { long: 'na2' },
-    { long: 'def-bol', default: true },
-    { long: 'from-def', default: 'defffault', type: 'string' },
-    { long: 'def-arr', default: ['default-arr'], type: 'array' },
-    { long: 'lang', env: 'LANG', default: 'not used', type: 'string' },
-];
+import { GetOpt } from './lib';
 
 const argv = [
-    '_0',
-    '_1',
+    '/_0/foo/bar/node',
+    '/_1/test.js',
     '--foo',
     'val0',
     '--bar=23',
-    'foo',
+    'pos0',
     '--opt',
     'val1',
     'pos1',
@@ -47,152 +29,60 @@ const argv = [
     'an argument'
 ];
 
-// const getopt = new GetOpt({
-//     options: opts,
-//     env: { 'LANG': 'BR_bork' },
-//     argv: argv
-// });
-
-// console.log(
-//     getopt,
-//     getopt['configuration'].options
-// );
-
-// new GetOpt({
-//     options: opts,
-//     args: { name: 'dies', info: 'does stuffs', required: true },
-//     argv: ['_0', './fake.js', '-h'],
-//     env: {}
-// });
-
-// console.log(new GetOpt({
-//     options: opts,
-//     args: [{
-//         name: 'dies',
-//         info: 'does stuffs',
-//         required: true,
-//         children: [{
-//             name: 'foo',
-//             info: '',
-//             command: true,
-//             children: [
-//                 {
-//                     info: 'everything is awesome',
-//                     name: 'posArg1',
-//                     spreads: true,
-
-//                 }
-//             ]
-
-//         }],
-//     }],
-//     argv,
-//     env: {}
-// }).posTree);
-
-// console.log(new GetOpt({
-//     options: opts,
-//     args: [{
-//         name: 'mv',
-//         info: 'does stuffs',
-//         command: true,
-//         children: [
-//             {
-//                 info: 'pseudo move of files',
-//                 name: 'from',
-//             },
-//             {
-//                 info: 'pseudo move of files',
-//                 name: 'to',
-//             }
-//         ]
-//     }],
-//     argv: ['_0', '_1', 'mv', 'from here', 'to there'],
-//     env: {}
-// }).posTree);
-
-
-const fsArgs = [{
-    name: 'mv',
-    info: 'mv style arguments',
-    command: true,
-    children: [
+const getopt = new GetOpt({
+    appName: 'getopt-example',
+    options: [
         {
-            name: 'from',
-            info: 'source',
-            required: true,
+            short: 'f',
+            type: 'array',
+            long: 'foo',
+            valueName: 'my-val'
         },
         {
-            name: 'to',
-            info: 'target',
-            required: true,
-        }
-    ]
-}, {
-    name: 'chmod',
-    info: 'does stuffs',
-    command: true,
-    children: [
-        {
-            name: 'modifier',
-            info: 'modifier char magics',
-            required: true,
+            short: 'a',
+            type: 'boolean',
+            long: 'foo1',
         },
         {
-            name: 'files',
-            info: 'files to modify',
-            required: true,
-            spreads: true
+            short: 'x',
+            type: 'boolean',
+            long: 'foo2',
+        },
+        {
+            short: 'y',
+            type: 'boolean',
+            long: 'foo3',
+        },
+        {
+            short: 'z',
+            type: 'boolean',
+            long: 'foo4',
+        },
+        {
+            short: 'o',
+            type: 'array',
+            long: 'opt',
+        },
+        {
+            // short: 'b',
+            type: 'array',
+            long: 'bar'
+        },
+        {
+            short: 'k',
+            type: 'array',
+            long: 'opt2'
+        }
+    ],
+    positionalArgs: [
+        {
+            name: 'some-more-args',
+            // maniditory: true,
+            multi: true,
         }
     ]
-}, {
-    
-    name: 'ls',
-    info: 'ls style arguments',
-    command: true,
-    children: [{
-        name: 'files',
-        info: 'files to list',
-        spreads: true,
-    }]
-}];
+}, argv);
 
-console.log('1', new GetOpt({
-    options: [{ 'long': 'rec', 'short': 'R' }],
-    // args: fsArgs,
-    argv: ['_0', '_1', 'mv', 'from here', 'to there'],
-    env: {}
-}).posTree);
+console.log(getopt.result);
 
-const go0 = new GetOpt({
-    options: [{ 'long': 'rec', 'short': 'R' }],
-    // args: fsArgs,
-    argv: ['_0', '_1', 'ls', '/some/file1', '/some/more/file*'],
-    env: {}
-});
-console.log('2', go0.posTree);
-
-console.log('3', new GetOpt({
-    options: [{ 'long': 'rec', 'short': 'R' }],
-    // args: fsArgs,
-    argv: ['_0', '_1', 'chmod', '-R', 'u+x', 'file1', 'file2', '-h'],
-    env: {}
-}).posTree);
-
-// new GetOpt({
-//     options: [],
-//     args: {
-//         name: 'dies',
-//         info: 'does stuffs',
-//         required: true,
-//         commands: {
-//             foo: {
-//                 info: 'everything is awesome',
-//                 name: 'posArg1',
-//                 spreads: true,
-//             }
-//         },
-//     },
-//     argv: ['node', './fake.js', 'posArg1',],
-//     env: {}
-// })['printHelp']();
+console.log(getopt.usage);

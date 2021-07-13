@@ -1,4 +1,4 @@
-export function Argument(key: string, defaultValue?: string | string[]) {
+export function Arguments() {
     return function (target: any, propertyKey: string): void {
         // console.log(key, "<<<", target, ">>>>", propertyKey);
 
@@ -7,9 +7,7 @@ export function Argument(key: string, defaultValue?: string | string[]) {
         }
 
         target.__tna_di_getopt_arguments__.push({
-            getOptKey: key,
             target: propertyKey,
-            defaultVal: defaultValue,
         });
     }
 }

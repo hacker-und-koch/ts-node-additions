@@ -1,4 +1,7 @@
 # TS Node Additions
+[![Test](https://github.com/hacker-und-koch/ts-node-additions/actions/workflows/test.yml/badge.svg)](https://github.com/hacker-und-koch/ts-node-additions/actions/workflows/test.yml)
+
+
 ## Maintained Packages
 
 * [logger](./packages/logger)
