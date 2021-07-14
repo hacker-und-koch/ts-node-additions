@@ -1,16 +1,29 @@
 import { Application, bootstrap, OnReady, Injectable } from '@hacker-und-koch/di';
 import { Logger } from '@hacker-und-koch/logger';
 
-import { Server, Router, Request, Response, RequestHandler, HandlingError } from './lib';
+import {
+    Router,
+    Request,
+    Response,
+    RequestHandler,
+    HandlingError,
+    Route,
+} from './lib';
 
+function ParseJson(foo: any) {
 
-@Injectable()
-export class SomeRoute extends RequestHandler<void, string> {
-    path: string = '/hi';
+}
 
-    async handle(req: Request<void>, res: Response): Promise<string> {
-        if (Object.keys(req.parsedUrl.query).length > 0) {
-            this.logger.log('QUERY:', req.parsedUrl.query);
+@Route({
+    path: '/hi',
+    children: [
+
+    ]
+})
+export class SomeRoute extends RequestHandler {
+    async handle(req: Request, res: Response): Promise<string> {
+        if ([...req.parsedUrl.searchParams.keys()].length) {
+            this.logger.log('Query params:', req.parsedUrl.searchParams);
             throw new HandlingError('Not supporting queries!', 400);
         }
         return 'hello, planet!';
@@ -20,7 +33,7 @@ export class SomeRoute extends RequestHandler<void, string> {
 @Injectable()
 export class Default404Route /* DO NOT EXTEND REQUESTHANDLER!! */ {
 
-    async handle(req: Request<void>, res: Response): Promise<string> {
+    async handle(req: Request, res: Response): Promise<string> {
         res.status(404)
             .headers({
                 'content-type': 'text/html',

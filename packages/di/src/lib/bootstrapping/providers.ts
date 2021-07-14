@@ -220,9 +220,13 @@ export class Providers {
         instance.initState = 'configuring';
 
         if (conf_key_package) {
+            // naivly try to overwrite instances config key
             (instance.instance as any)[conf_key_package.propertyKey] = {
-                ...conf_key_package.defaultConfiguration,
+                // apply default
+                ...conf_key_package.defaultConfiguration, 
+                // if present use previously existing value
                 ...(instance.instance as any)[conf_key_package.propertyKey],
+                // if present use current config
                 ...(matching_conf && matching_conf.config || {})
             };
         }

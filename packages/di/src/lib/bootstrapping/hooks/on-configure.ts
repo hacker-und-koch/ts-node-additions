@@ -6,5 +6,5 @@ export declare class OnConfigure extends IInjectable {
         defaultConfiguration: any;
     };
 
-    onConfigure(configuration: any): Promise<void>;
+    onConfigure(): void | Promise<void>;
 }

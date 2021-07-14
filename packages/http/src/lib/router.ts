@@ -1,13 +1,15 @@
-import { Injectable, InjectConfiguration, Inject, OnConfigure, OnInit } from '@hacker-und-koch/di';
-import { Server, ServerConfiguration } from './server';
 import { randomBytes } from 'crypto';
 import { IncomingMessage, ServerResponse } from 'http';
-import { parse as parseUrl } from 'url';
+import { URL } from 'url';
+
+import { Injectable, InjectConfiguration, Inject, OnConfigure, OnInit, Providers } from '@hacker-und-koch/di';
 import { Logger } from '@hacker-und-koch/logger';
-import { Default404Route } from './default-404.route';
-import { Response, Request } from './models';
-import { RequestHandler } from './request-handler';
+
 import { HandlingError } from './errors';
+import { Response, Request } from './models';
+import { Server, ServerConfiguration } from './server';
+import { RequestHandler } from './request-handler';
+import { Default404Route } from './default-404.route';
 
 export interface RouterOptions extends ServerConfiguration {
     maxRequestSeconds?: number;
@@ -19,7 +21,7 @@ export interface RouterOptions extends ServerConfiguration {
         Default404Route,
     ]
 })
-export class Router extends RequestHandler<void, void> implements OnConfigure, OnInit {
+export class Router extends RequestHandler implements OnConfigure, OnInit {
 
     @InjectConfiguration<RouterOptions>({
         host: '127.0.0.1',
@@ -28,7 +30,7 @@ export class Router extends RequestHandler<void, void> implements OnConfigure, O
     })
     private configuration: RouterOptions;
 
-    @Inject(Server, randomBytes(4).toString('hex'))
+    @Inject(Server, randomBytes(16).toString('hex'))
     private server: Server;
 
     constructor(protected logger: Logger) {
@@ -47,7 +49,7 @@ export class Router extends RequestHandler<void, void> implements OnConfigure, O
     }
 
     async kickOfHandling(req: IncomingMessage, res: ServerResponse) {
-        const request: Request<unknown> = this.genRequest(req);
+        const request: Request = this.genRequest(req);
         const response: Response = this.genResponse(res);
 
         this.logger.spam(`Handling request ${request.id}.`)
@@ -69,8 +71,9 @@ export class Router extends RequestHandler<void, void> implements OnConfigure, O
             if (e instanceof HandlingError) {
                 res.statusCode = e.statusCode;
                 res.write(e.message);
+                this.logger.warn(`Request ${request.id} ran into a HandlingError`, e);
             } else {
-                this.logger.error(`Failed to handle request ${request.id}.`, e);
+                this.logger.error(`Failed to handle request ${request.id}`, e);
                 res.statusCode = 500;
             }
             res.end();
@@ -84,12 +87,12 @@ export class Router extends RequestHandler<void, void> implements OnConfigure, O
         res.end();
     }
 
-    private genRequest(req: IncomingMessage): Request<unknown> {
+    private genRequest(req: IncomingMessage): Request {
         return {
             _raw: req,
             async body() { },
-            parsedUrl: parseUrl(req.url, true),
-            id: randomBytes(12).toString('hex'),
+            parsedUrl: new URL(req.url, 'http://localhost'),
+            id: randomBytes(4).toString('hex'), // low entropy :(
             parameters: {}
         };
     }
