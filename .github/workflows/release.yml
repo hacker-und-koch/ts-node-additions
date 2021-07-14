@@ -45,10 +45,8 @@ jobs:
      - name: Update version in package.json files
        env:
          NPM_TOKEN: ${{ secrets.NPM_READ_TOKEN }}
-       run: node .run.js version ${{ github.event.inputs.increase }}
-
-     - name: Commit and push changes
        run: |
+        node .run.js version ${{ github.event.inputs.increase }}
         git add ./package.json
         git add ./*/package.json
         git commit -m 'release: update package.json files' || echo 'Did not commit any files.'
@@ -66,3 +64,4 @@ jobs:
         git pull --squash -s recursive -X theirs origin release
         git commit -m 'release: squashed release back to develop'
         git push origin develop
+        git push --tags
