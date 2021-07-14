@@ -19,4 +19,4 @@ describe("arrflat", () => {
 
         expect(arrflat(_3dim)).toEqual(_3dim_flat);
     });
-})
+});
