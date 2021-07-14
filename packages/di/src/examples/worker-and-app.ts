@@ -1,32 +1,39 @@
 import { Injectable, bootstrap, Application } from '../lib';
 
 @Injectable()
-class Worker {
+class InnerWorker {
     constructor() {
-        console.log("worker lives")
+        console.log("inner worker lives");
     }
     doSome() {
-        console.log("worker does something");
+        console.log("inner worker does something");
     }
 }
 
+@Injectable()
+class OuterWorker {
+    constructor(private worker: InnerWorker) {
+        console.log("outer worker lives");
+    }
+
+    doSome() {
+        console.log("outer worker does something");
+        this.worker.doSome();
+    }
+}
 
 @Application({
     declarations: [
-        Worker
+        InnerWorker,
+        OuterWorker,
     ]
 })
 class App {
-    
-    constructor(private worker: Worker) {
+    constructor(private worker: OuterWorker) {
         console.log("app lives");
         this.worker.doSome();
     }
-
 }
-
-// console.log(App);
-// console.log(Worker);
 
 bootstrap(App, {
     log: "spam"
