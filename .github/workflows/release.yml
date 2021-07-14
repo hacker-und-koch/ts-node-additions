@@ -19,24 +19,26 @@ jobs:
         fetch-depth: 0
         token: ${{ secrets.GIT_TOKEN }}
 
-     - name: Cache node modules
-       uses: actions/cache@v2
-       env:
-         cache-name: cache-node-modules
-       with:
-         # npm cache files are stored in `~/.npm` on Linux/macOS
-         path: ~/.npm
-         key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
-         restore-keys: |
-           ${{ runner.os }}-build-${{ env.cache-name }}-
-           ${{ runner.os }}-build-
-           ${{ runner.os }}-
+    #  - name: Cache node modules
+    #    uses: actions/cache@v2
+    #    env:
+    #      cache-name: cache-node-modules
+    #    with:
+    #      # npm cache files are stored in `~/.npm` on Linux/macOS
+    #      path: ~/.npm
+    #      key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+    #      restore-keys: |
+    #        ${{ runner.os }}-build-${{ env.cache-name }}-
+    #        ${{ runner.os }}-build-
+    #        ${{ runner.os }}-
 
      - name: Setup Node.js ${{ matrix.node-version }}
        uses: actions/setup-node@v1
        with:
          registry-url: 'https://registry.npmjs.org'
          node-version: ${{ matrix.node-version }}
+         always-auth: true
+         cache: 'yarn'
      - name: Checkout release branch
        run: | 
         git config user.email "github-actions@github.com"
@@ -48,25 +50,29 @@ jobs:
      - name: Build And Test
        env:
          CI: true
-         NPM_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
+         NPM_TOKEN: ${{ secrets.NPM_READ_TOKEN }}
+         NODE_AUTH_TOKEN: ${{ secrets.NPM_READ_TOKEN }}
        run: |
-        yarn install --frozen-lockfile --cache --prefer-offline
+        yarn install --frozen-lockfile --cache --prefer-offline --ignore-scripts
         yarn build
         yarn test
 
      - name: Update version in package.json files
+       env:
+         NPM_TOKEN: ${{ secrets.NPM_READ_TOKEN }}
        run: node .run.js version ${{ github.event.inputs.increase }}
 
      - name: Commit and push changes
        run: |
         git add ./package.json
         git add ./*/package.json
-        git commit -m 'release: update package.json files'
-        git push
+        git commit -m 'release: update package.json files' || echo 'Did not commit any files.'
+        git push origin release
 
      - name: Release packages to NPM
        env:
          NPM_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
+         NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
        run: node .run.js release
 
      - name: Merge changes back to master
@@ -74,4 +80,4 @@ jobs:
         git checkout develop
         git pull --squash -s recursive -X theirs origin release
         git commit -m 'release: squashed release back to develop'
-        git push
+        git push origin develop
