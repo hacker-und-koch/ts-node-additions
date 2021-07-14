@@ -1,6 +1,6 @@
 {
     "name": "@hacker-und-koch/logger",
-    "version": "0.1.13",
+    "version": "0.1.14",
     "description": "",
     "main": "bin/index.js",
     "types": "declarations/index.js",
