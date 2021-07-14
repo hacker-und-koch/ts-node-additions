@@ -14,8 +14,7 @@ jobs:
     strategy:
       matrix:
         node-version: [16.x]
-    env:
-      NPM_TOKEN: ${{ secrets.NPM_READ_TOKEN }}    
+   
     steps:
     - uses: actions/checkout@v2
       
@@ -32,12 +31,16 @@ jobs:
           ${{ runner.os }}-build-${{ env.cache-name }}-
           ${{ runner.os }}-build-
           ${{ runner.os }}-
-    - name: Use Node.js ${{ matrix.node-version }}
+
+    - name: Setup Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v1
       with:
         node-version: ${{ matrix.node-version }}
-    - run: yarn install --frozen-lockfile --cache --prefer-offline
-    - run: yarn build
-    - run: yarn test
+    - name: Install and build
       env:
+        NPM_TOKEN: ${{ secrets.NPM_READ_TOKEN }}    
         CI: true
+      run: |
+        yarn install --frozen-lockfile --cache --prefer-offline
+        yarn build
+        yarn test

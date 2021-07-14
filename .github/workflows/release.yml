@@ -10,15 +10,15 @@ on:
         default: 'patch'
 
 jobs:
-  prepareAndRelease:
+  buildAndTest:
     runs-on: ubuntu-latest
-    env:
-      NPM_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
     steps:
-     - uses: actions/checkout@v2
+     - name: Checkout files
+       uses: actions/checkout@v2
        with: 
         fetch-depth: 0
         token: ${{ secrets.GIT_TOKEN }}
+
      - name: Cache node modules
        uses: actions/cache@v2
        env:
@@ -31,28 +31,46 @@ jobs:
            ${{ runner.os }}-build-${{ env.cache-name }}-
            ${{ runner.os }}-build-
            ${{ runner.os }}-
-     - name: Use Node.js ${{ matrix.node-version }}
+
+     - name: Setup Node.js ${{ matrix.node-version }}
        uses: actions/setup-node@v1
        with:
+         registry-url: 'https://registry.npmjs.org'
          node-version: ${{ matrix.node-version }}
-     - run: | 
+     - name: Checkout release branch
+       run: | 
         git config user.email "github-actions@github.com"
         git config user.name "github-actions"
         git checkout release
         git pull --squash -s recursive -X theirs origin develop
         git commit -m 'release: squash develop into release'
-     - run: |
+
+     - name: Build And Test
+       env:
+         CI: true
+         NPM_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
+       run: |
         yarn install --frozen-lockfile --cache --prefer-offline
         yarn build
         yarn test
-     - run: node .run.js version ${{ github.event.inputs.increase }}
-     - run: |
+
+     - name: Update version in package.json files
+       run: node .run.js version ${{ github.event.inputs.increase }}
+
+     - name: Commit and push changes
+       run: |
         git add ./package.json
         git add ./*/package.json
         git commit -m 'release: update package.json files'
         git push
-     - run: node .run.js release
-     - run: |
+
+     - name: Release packages to NPM
+       env:
+         NPM_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
+       run: node .run.js release
+
+     - name: Merge changes back to master
+       run: |
         git checkout develop
         git pull --squash -s recursive -X theirs origin release
         git commit -m 'release: squashed release back to develop'
