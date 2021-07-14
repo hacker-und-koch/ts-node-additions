@@ -65,7 +65,7 @@ jobs:
         git add ./package.json
         git add ./*/package.json
         git commit -m 'release: update package.json files'
-        git push
+        git push origin release
 
      - name: Release packages to NPM
        env:
@@ -78,4 +78,4 @@ jobs:
         git checkout develop
         git pull --squash -s recursive -X theirs origin release
         git commit -m 'release: squashed release back to develop'
-        git push
+        git push origin develop
