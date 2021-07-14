@@ -125,8 +125,34 @@ class OuterWithUniqueInstances {
 }
 ```
 
-## Passing configs
-TODO
+## Passing configs [[example](./src/examples/config.ts)]
+```typescript
+
+interface MyWorkerConfig {
+    myOption: string;
+}
+
+@Injectable()
+class MyWorker implements OnConfigure {
+
+    @InjectConfiguration()
+    private config: MyWorkerConfig;
+
+    onConfigure() {
+        console.log(`My option is: ${this.config.myOption}`);
+    }
+}
+
+@Application({
+    declarations: [MyWorker],
+    configs: [config<MyWorkerConfig>(MyWorker, {
+        myOption: 'foo',
+    })]
+})
+class MyApp {
+    constructor(worker: MyWorker) { }
+}
+```
 
 ## Bootstrap Options
 TODO

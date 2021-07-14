@@ -11,6 +11,7 @@
         "build:watch": "tsc --watch",
         "test": "jasmine",
         "test:watch": "npx nodemon --exec jasmine",
+        "example:config": "node bin/examples/config",
         "example:getopt": "node bin/examples/getopt",
         "example:hooks": "node bin/examples/hooks",
         "example:logger": "node bin/examples/logger",
