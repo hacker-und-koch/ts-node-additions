@@ -1,6 +1,6 @@
 {
     "name": "@hacker-und-koch/http",
-    "version": "0.1.14",
+    "version": "0.2.0",
     "description": "",
     "main": "bin/index.js",
     "types": "declarations/index.js",
@@ -18,7 +18,7 @@
     },
     "license": "LGPL-3.0",
     "dependencies": {
-        "@hacker-und-koch/di": "0.1.14"
+        "@hacker-und-koch/di": "0.2.0"
     },
     "devDependencies": {
         "@types/jasmine": "^3.5.5",
