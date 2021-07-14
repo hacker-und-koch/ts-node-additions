@@ -63,6 +63,7 @@ jobs:
            always-auth=true
          EOF
          node .run.js release
+         unlink .npmrc
 
      - name: Merge changes back to master
        run: |
