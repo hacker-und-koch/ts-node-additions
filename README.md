@@ -1,14 +1,15 @@
 # TS Node Additions
-[![Test](https://github.com/hacker-und-koch/ts-node-additions/actions/workflows/test.yml/badge.svg)](https://github.com/hacker-und-koch/ts-node-additions/actions/workflows/test.yml)
 
 [![npm version](https://badge.fury.io/js/%40hacker-und-koch%2Fdi.svg)](https://badge.fury.io/js/%40hacker-und-koch%2Fdi)
+[![Test](https://github.com/hacker-und-koch/ts-node-additions/actions/workflows/test.yml/badge.svg)](https://github.com/hacker-und-koch/ts-node-additions/actions/workflows/test.yml)
+
 ## Maintained Packages
 
-* [dependency-injection](./packages/di)
-* [getopt](./packages/getopt)
-* [http](./packages/http)
-* [logger](./packages/logger)
-* [util](./packages/util)
+* **[dependency-injection](./packages/di)**
+* **[getopt](./packages/getopt)**
+* **[http](./packages/http)**
+* **[logger](./packages/logger)**
+* **[util](./packages/util)**
 
 ## System Requirements
 * NodeJS
