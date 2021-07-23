@@ -254,26 +254,27 @@ export class LoggerBuilder {
                     const timePart = this._noTimestamp ? '' : this.defaultTimestamp(pkg.time);
                     const timeUntilClass = `${timePart}${lvlPart}${pkg.class}${idPart}: `;
                     let formatedLine = line + '\n';
-                    if (windowX > 0) {
-                        const maxTextWidth = windowX - timeUntilClass.length;
-                        const lines = [];
-                        for (let segment of line.split(' ')) {
-                            let idx = lines.length - 1;
-                            if (idx < 0) {
-                                lines.push(segment);
-                            } else if ((lines[idx].length + segment.length + 1) > maxTextWidth) {
-                                lines.push(segment);
-                            } else {
-                                lines[idx] += ` ${segment}`;
-                            }
-                        }
-                        formatedLine = lines.reduce((acc, cur, idx) => {
-                            if (idx > 0) {
-                                cur = cur.padStart(timeUntilClass.length + cur.length);
-                            }
-                            return `${acc}${cur}\n`;
-                        }, '');
-                    }
+                    // feature is somewhat nice, but not quite usefull yet
+                    // if (windowX > 0) {
+                    //     const maxTextWidth = windowX - timeUntilClass.length;
+                    //     const lines = [];
+                    //     for (let segment of line.split(' ')) {
+                    //         let idx = lines.length - 1;
+                    //         if (idx < 0) {
+                    //             lines.push(segment);
+                    //         } else if ((lines[idx].length + segment.length + 1) > maxTextWidth) {
+                    //             lines.push(segment);
+                    //         } else {
+                    //             lines[idx] += ` ${segment}`;
+                    //         }
+                    //     }
+                    //     formatedLine = lines.reduce((acc, cur, idx) => {
+                    //         if (idx > 0) {
+                    //             cur = cur.padStart(timeUntilClass.length + cur.length);
+                    //         }
+                    //         return `${acc}${cur}\n`;
+                    //     }, '');
+                    // }
                     return `${timeUntilClass}${formatedLine}`;
                 })
                 .join('');
