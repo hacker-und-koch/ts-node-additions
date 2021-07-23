@@ -2,7 +2,7 @@ import { randomBytes } from 'crypto';
 import { IncomingMessage, ServerResponse } from 'http';
 import { URL } from 'url';
 
-import { Injectable, InjectConfiguration, Inject, OnConfigure, OnInit, Providers } from '@hacker-und-koch/di';
+import { Injectable, InjectConfiguration, Inject, OnConfigure, OnInit, Providers, HookState, UnknownInstanceError } from '@hacker-und-koch/di';
 import { Logger } from '@hacker-und-koch/logger';
 
 import { HandlingError } from './errors';
@@ -11,8 +11,9 @@ import { Server, ServerConfiguration } from './server';
 import { RequestHandler } from './request-handler';
 import { Default404Route } from './default-404.route';
 
-export interface RouterOptions extends ServerConfiguration {
+export interface RouterConfiguration extends ServerConfiguration {
     maxRequestSeconds?: number;
+    handlers?: (typeof RequestHandler)[]
 }
 
 @Injectable({
@@ -23,12 +24,13 @@ export interface RouterOptions extends ServerConfiguration {
 })
 export class Router extends RequestHandler implements OnConfigure, OnInit {
 
-    @InjectConfiguration<RouterOptions>({
+    @InjectConfiguration<RouterConfiguration>({
         host: '127.0.0.1',
         port: 8080,
         maxRequestSeconds: 15 * 60 * 1e3,
+        handlers: []
     })
-    private configuration: RouterOptions;
+    private configuration: RouterConfiguration;
 
     @Inject(Server, randomBytes(16).toString('hex'))
     private server: Server;
@@ -42,6 +44,7 @@ export class Router extends RequestHandler implements OnConfigure, OnInit {
             ...this.configuration
         };
     }
+
     async onInit() {
         this.server.handler = (req, res) => {
             this.kickOfHandling.apply(this, [req, res]);

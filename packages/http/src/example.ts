@@ -1,4 +1,4 @@
-import { Application, bootstrap, OnReady, Injectable } from '@hacker-und-koch/di';
+import { Application, bootstrap, OnReady, Injectable, config } from '@hacker-und-koch/di';
 import { Logger } from '@hacker-und-koch/logger';
 
 import {
@@ -8,26 +8,37 @@ import {
     RequestHandler,
     HandlingError,
     Route,
+    RouterConfiguration,
 } from './lib';
-
-function ParseJson(foo: any) {
-
-}
 
 @Route({
     path: '/hi',
-    children: [
-
-    ]
 })
-export class SomeRoute extends RequestHandler {
-    async handle(req: Request, res: Response): Promise<string> {
-        if ([...req.parsedUrl.searchParams.keys()].length) {
-            this.logger.log('Query params:', req.parsedUrl.searchParams);
+class SomeRoute extends RequestHandler {
+    async handle(): Promise<string> {
+        if (this.ctx.hasSearch) {
+            this.logger.log('Query params:', this.ctx.search);
             throw new HandlingError('Not supporting queries!', 400);
         }
         return 'hello, planet!';
     }
+}
+
+@Route({
+    path: '/values/{id}',
+})
+class ValuesRoute extends RequestHandler {
+    
+}
+
+@Route({
+    path: '/api',
+    handlers: [
+        ValuesRoute,
+    ],
+})
+class ApiRoute extends RequestHandler {
+
 }
 
 @Injectable()
@@ -48,15 +59,20 @@ export class Default404Route /* DO NOT EXTEND REQUESTHANDLER!! */ {
         Router,
         SomeRoute,
         Default404Route,
+        ApiRoute,
+    ],
+    configs: [
+        config<RouterConfiguration>(Router, {
+            handlers: [
+                SomeRoute,
+                ApiRoute,
+            ]
+        })
     ]
 })
 class App implements OnReady {
-    constructor(private router: Router, private route: SomeRoute, private logger: Logger) {
+    constructor(private router: Router, private logger: Logger) {
 
-    }
-
-    onInit() {
-        this.router.use(this.route);
     }
 
     onReady() {
