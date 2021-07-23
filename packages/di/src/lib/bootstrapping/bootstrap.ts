@@ -31,7 +31,7 @@ export async function bootstrap(target: any, options?: BootstrapOptions): Promis
 
     const providers = options.providers || new Providers({
         loglevels: formatedLogLevelOption
-     });
+    });
 
     providers.createGetOpt({
         ...(target.__tna_di_options__ || {})
@@ -43,11 +43,13 @@ export async function bootstrap(target: any, options?: BootstrapOptions): Promis
 
     try {
         providers.gimme<typeof target>(target, 'bootstrap');
-    } catch(e) {
+    } catch (e) {
         di_logger.error(e.message);
         di_logger.info(e);
         process.exit(1);
     }
+    
+    providers.announceInstanceCreation();
 
     await providers.configureInstances()
         .then(_ => providers.initInstances())

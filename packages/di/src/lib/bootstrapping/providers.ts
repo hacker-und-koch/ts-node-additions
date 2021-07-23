@@ -1,9 +1,11 @@
 import { GetOpt, GetOptOption, GetOptConfiguration } from '@hacker-und-koch/getopt';
+import { Logger, Loglevel } from '@hacker-und-koch/logger';
+
 import { ConfigurationProvider, Configuration } from './configurations';
 import { OnConfigure, OnInit, OnReady, OnDestroy } from './hooks';
-import { BootstrapPhaseError, MissingDeclarationError, MissingConfigurationError, UnspecificConfigError } from '../errors';
+import { BootstrapPhaseError, MissingDeclarationError, MissingConfigurationError, UnspecificConfigError, UnknownInstanceError, } from '../errors';
 import { IInjectable, IApplication } from './hooks/injectable';
-import { Logger, Loglevel } from '@hacker-und-koch/logger';
+import { HookState } from './models';
 
 export type LoglevelOption = Loglevel | { [className: string]: Loglevel };
 
@@ -19,16 +21,6 @@ export interface TemplatePackage {
     multiIds: { token: string, id: string }[];
     declaredBy: string;
 }
-
-export declare type HookState =
-    'unset'
-    | 'configuring'
-    | 'configured'
-    | 'initializing'
-    | 'initialized'
-    | 'ready'
-    | 'destroying'
-    | 'destroyed';
 
 export interface InstancePackage<T> {
     provides: string;
@@ -186,6 +178,16 @@ export class Providers {
         this.logger.info(`Done configuring`);
     }
 
+    public announceInstanceCreation() {
+        for (let pkg of this.instances) {
+            if ('_tnaOnInstancesCreated' in pkg.instance) {
+                // pkg.instance._tnaOnInstancesCreated.apply(pkg.instance, [this.gimmeConfiguration(pkg), this]);
+                let self = this;
+                pkg.instance._tnaOnInstancesCreated.apply(pkg.instance, [self.gimmeConfiguration(pkg)?.config, self]);
+            }
+        }
+    }
+
     private async applyConfigurations(instances: InstancePackage<OnConfigure & ConfigurationProvider & IInjectable>[]): Promise<void> {
 
         for (const instance of instances) {
@@ -200,11 +202,7 @@ export class Providers {
         }
 
 
-        const matching_conf = this.options.configurations
-            .find(conf =>
-                conf.forModule === instance.provides
-                && conf.id === instance.id
-            );
+        const matching_conf = this.gimmeConfiguration(instance);
         const conf_key_package = instance.instance.__tna_di_configuration_key__;
 
         if (conf_key_package && !matching_conf && !conf_key_package.defaultConfiguration) {
@@ -223,7 +221,7 @@ export class Providers {
             // naivly try to overwrite instances config key
             (instance.instance as any)[conf_key_package.propertyKey] = {
                 // apply default
-                ...conf_key_package.defaultConfiguration, 
+                ...conf_key_package.defaultConfiguration,
                 // if present use previously existing value
                 ...(instance.instance as any)[conf_key_package.propertyKey],
                 // if present use current config
@@ -259,6 +257,14 @@ export class Providers {
             ];
         }
         return;
+    }
+
+    private gimmeConfiguration(instance: InstancePackage<any>) {
+        return this.options.configurations
+            .find(conf =>
+                conf.forModule === instance.provides
+                && conf.id === instance.id
+            );
     }
 
     async initInstances() {
@@ -336,7 +342,14 @@ export class Providers {
         return destructionErrors;
     }
 
-
+    getInstanceState(instance: any): HookState {
+        const knownPackage = this.instances.find(pkg => pkg.instance === instance);
+        if (!knownPackage) {
+            throw new UnknownInstanceError();
+        }
+        const state = knownPackage?.initState;
+        return state || 'unset';
+    }
 
     gimme(instance: string, caller: string): any
     gimme(instance: any, caller: string): any
@@ -501,6 +514,6 @@ export class Providers {
     }
 
     private logLevelOf(classIdentifier: string): Loglevel {
-        return Providers.logLevelIn(classIdentifier, this.options.loglevels as {[key: string]: Loglevel});
+        return Providers.logLevelIn(classIdentifier, this.options.loglevels as { [key: string]: Loglevel });
     }
 }

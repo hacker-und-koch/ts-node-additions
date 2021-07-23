@@ -18,3 +18,9 @@ export class BootstrapPhaseError extends Error {};
  *  per target.
  */
 export class UnspecificConfigError extends Error {};
+
+/**
+ * Issued when information about an instance is requested
+ * that is unknown
+ */
+export class UnknownInstanceError extends Error {};
