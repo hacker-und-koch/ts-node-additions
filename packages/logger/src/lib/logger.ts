@@ -201,6 +201,15 @@ export class LoggerBuilder {
         return this;
     }
 
+    copySettingsFrom(template: Logger): this {
+        this._format = template['format'];
+        this._level = template['activeLogLevel'];
+        this._stdout = template['stdout'];
+        this._stderr = template['stderr'];
+
+        return this;
+    }
+
     /**
      * Calling this function will finish the building process. 
      * A new instance of `Logger` will be created and configured
@@ -238,12 +247,12 @@ export class LoggerBuilder {
 
     private defaultFormat(): FormatFunction {
         return (pkg: LoggerPackage) => {
-            let windowX = -1;
-            try {
-                windowX = this._stdout.getWindowSize()[0];
-            } catch (e) {
-                // ignore, since we can just print everything into one line.
-            }
+            // let windowX = -1;
+            // try {
+            //     windowX = this._stdout.getWindowSize()[0];
+            // } catch (e) {
+            //     // ignore, since we can just print everything into one line.
+            // }
 
             const rawOutput = (utilFormat as any)(...pkg.parts);
 
