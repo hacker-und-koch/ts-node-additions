@@ -1,18 +1,17 @@
 import { randomBytes } from 'crypto';
 import { IncomingMessage, ServerResponse } from 'http';
-import { URL } from 'url';
 
 import { Injectable, InjectConfiguration, Inject, OnConfigure, OnInit, Providers, HookState, UnknownInstanceError } from '@hacker-und-koch/di';
 import { Logger } from '@hacker-und-koch/logger';
 
-import { HandlingError } from './errors';
-import { Response, Request } from './models';
+import { HttpError, RequestTimeoutError } from './errors';
 import { Server, ServerConfiguration } from './server';
 import { RequestHandler } from './request-handler';
 import { Default404Route } from './default-404.route';
+import { RequestContext } from './request-context';
 
 export interface RouterConfiguration extends ServerConfiguration {
-    maxRequestSeconds?: number;
+    maxRequestMs?: number;
     handlers?: (typeof RequestHandler)[]
 }
 
@@ -27,7 +26,7 @@ export class Router extends RequestHandler implements OnConfigure, OnInit {
     @InjectConfiguration<RouterConfiguration>({
         host: '127.0.0.1',
         port: 8080,
-        maxRequestSeconds: 15 * 60 * 1e3,
+        maxRequestMs: 15 * 60 * 1e3,
         handlers: []
     })
     private configuration: RouterConfiguration;
@@ -52,68 +51,39 @@ export class Router extends RequestHandler implements OnConfigure, OnInit {
     }
 
     async kickOfHandling(req: IncomingMessage, res: ServerResponse) {
-        const request: Request = this.genRequest(req);
-        const response: Response = this.genResponse(res);
+        const context = new RequestContext(req, res);
 
-        this.logger.spam(`Handling request ${request.id}.`)
+        this.logger.spam(`Kicking off request ${context.id}`)
         const timeout = setTimeout(() => {
-            this.logger.warn(`Closing request ${request.id} because of timeout.`);
-            res.statusCode = 408;
-            res.end();
-        }, this.configuration.maxRequestSeconds);
+            this.logger.warn(`Closing request ${context.id} because of timeout (${this.configuration.maxRequestMs})`);
+            context.error = new RequestTimeoutError();
+        }, this.configuration.maxRequestMs);
+
+        context.addErrorCallback(() => clearTimeout(timeout));
 
         res.on('finish', () => {
-            this.logger.spam(`Request ${request.id} finished with ${res.statusCode}.`);
+            this.logger.spam(`Request ${context.id} finished with ${res.statusCode}.`);
             clearTimeout(timeout)
         });
 
-        let body: unknown;
+        let body;
         try {
-            body = await this.handleRequest(request, response);
-        } catch (e) {
-            if (e instanceof HandlingError) {
-                res.statusCode = e.statusCode;
-                res.write(e.message);
-                this.logger.warn(`Request ${request.id} ran into a HandlingError`, e);
+            body = await this.handleRequest(context);
+        } catch (error) {
+            if (error instanceof HttpError) {
+                context.error = error;
+                this.logger.warn(`Request ${context.id} ran into an error: ${error.message}`);
             } else {
-                this.logger.error(`Failed to handle request ${request.id}`, e);
-                res.statusCode = 500;
+                this.logger.error(`Failed to handle request ${context.id}`, error);
+                context.error = new HttpError(error.message);
             }
-            res.end();
             return;
         }
 
-        if (typeof body !== 'undefined') {
+        if (body !== undefined) {
             res.write(Buffer.from(body));
         }
 
         res.end();
-    }
-
-    private genRequest(req: IncomingMessage): Request {
-        return {
-            _raw: req,
-            async body() { },
-            parsedUrl: new URL(req.url, 'http://localhost'),
-            id: randomBytes(4).toString('hex'), // low entropy :(
-            parameters: {}
-        };
-    }
-
-    private genResponse(res: ServerResponse): Response {
-        const result = {
-            _raw: res,
-            status: (code: number) => {
-                res.statusCode = code;
-                return result;
-            },
-            headers: (headers: { [key: string]: string }) => {
-                for (let name of Object.keys(headers)) {
-                    res.setHeader(name, headers[name]);
-                }
-                return result;
-            }
-        };
-        return result;
     }
 }

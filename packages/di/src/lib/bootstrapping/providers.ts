@@ -28,6 +28,7 @@ export interface InstancePackage<T> {
     id: string;
     consumes: { token: string; id: null }[];
     initState: HookState;
+    creationAnnounced?: boolean;
 }
 
 export class Providers {
@@ -179,11 +180,17 @@ export class Providers {
     }
 
     public announceInstanceCreation() {
-        for (let pkg of this.instances) {
-            if ('_tnaOnInstancesCreated' in pkg.instance) {
-                // pkg.instance._tnaOnInstancesCreated.apply(pkg.instance, [this.gimmeConfiguration(pkg), this]);
-                let self = this;
-                pkg.instance._tnaOnInstancesCreated.apply(pkg.instance, [self.gimmeConfiguration(pkg)?.config, self]);
+        while(this.instances.find(pkg => !pkg.creationAnnounced)) {
+            for (let pkg of this.instances) {
+                if (!('_tnaOnInstancesCreated' in pkg.instance)) {
+                    pkg.creationAnnounced = true;
+                    continue;
+                }
+                if (!pkg.creationAnnounced) {
+                    let self = this;
+                    pkg.instance._tnaOnInstancesCreated.apply(pkg.instance, [self.gimmeConfiguration(pkg)?.config, self]);
+                    pkg.creationAnnounced = true;
+                }
             }
         }
     }
@@ -484,6 +491,10 @@ export class Providers {
 
             this.options.configurations.push(config);
         }
+    }
+
+    instancePackageContaining(instance: any) {
+        return this.instances.find(pkg => pkg.instance === instance);
     }
 
     createInstance(target: any, args: any[]) {

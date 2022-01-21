@@ -28,6 +28,8 @@ jobs:
        run: | 
         git config user.email "github-actions@github.com"
         git config user.name "github-actions"
+        git pull origin # tmp test
+        git push        # tmp test
         git checkout release
         git pull --squash -s recursive -X theirs origin develop
         git commit -m 'release: squash develop into release'

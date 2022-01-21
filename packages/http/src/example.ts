@@ -2,23 +2,23 @@ import { Application, bootstrap, OnReady, Injectable, config } from '@hacker-und
 import { Logger } from '@hacker-und-koch/logger';
 
 import {
+    InvalidRequestError,
     Router,
-    Request,
-    Response,
     RequestHandler,
-    HandlingError,
     Route,
     RouterConfiguration,
+    RequestContext,
 } from './lib';
+
 
 @Route({
     path: '/hi',
 })
 class SomeRoute extends RequestHandler {
-    async handle(): Promise<string> {
-        if (this.ctx.hasSearch) {
-            this.logger.log('Query params:', this.ctx.search);
-            throw new HandlingError('Not supporting queries!', 400);
+    async handle(ctx: RequestContext): Promise<string> {
+        if (ctx.hasSearch) {
+            this.logger.log('Query params:', ctx.search);
+            throw new InvalidRequestError('DemoError: Not supporting query params');
         }
         return 'hello, planet!';
     }
@@ -26,9 +26,12 @@ class SomeRoute extends RequestHandler {
 
 @Route({
     path: '/values/{id}',
+    methods: ['GET', 'POST']
 })
 class ValuesRoute extends RequestHandler {
-    
+    async handle(ctx: RequestContext) {
+        return `Nice ${ctx.method} for ${ctx.pathVariables.get('id')}!`;
+    }
 }
 
 @Route({
@@ -44,11 +47,11 @@ class ApiRoute extends RequestHandler {
 @Injectable()
 export class Default404Route /* DO NOT EXTEND REQUESTHANDLER!! */ {
 
-    async handle(req: Request, res: Response): Promise<string> {
-        res.status(404)
-            .headers({
-                'content-type': 'text/html',
-            });
+    async handle(ctx: RequestContext): Promise<string> {
+        ctx.status = 404;
+
+        // todo: parse from Route decorator or something
+        ctx.original.res.setHeader('content-type', 'text/html');
 
         return 'Not found. <a href="/hi">try</a>';
     }
@@ -60,6 +63,7 @@ export class Default404Route /* DO NOT EXTEND REQUESTHANDLER!! */ {
         SomeRoute,
         Default404Route,
         ApiRoute,
+        ValuesRoute,
     ],
     configs: [
         config<RouterConfiguration>(Router, {
@@ -84,5 +88,7 @@ bootstrap(App, {
     log: {
         '*': 'info',
         'Router': 'spam',
+        ApiRoute: 'spam',
+        RequestHandler: 'spam',
     },
 });
