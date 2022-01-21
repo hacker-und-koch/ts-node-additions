@@ -1,7 +1,8 @@
+import { Logger } from '@hacker-und-koch/logger';
 import { randomBytes } from 'crypto';
 import { IncomingMessage, ServerResponse } from 'http';
 import { URL, URLSearchParams } from 'url';
-import { BodySizeExceededError, HttpError } from './errors';
+import { BodySizeExceededError, HttpError, InvalidRequestError } from './errors';
 
 export declare type ErrorCallback = (error?: HttpError) => any;
 
@@ -9,10 +10,12 @@ export class RequestContext {
     constructor(
         private _req: IncomingMessage,
         private _res: ServerResponse,
+        private logger: Logger,
         private _id: string = randomBytes(8).toString('hex'),
     ) {
         this._url = new URL(_req.url, 'http://' + (_req.socket.localAddress as string || _req.headers['x-forwarded-for'] as string || 'localhost'));
         this._pathLeftToEvaluate = this._url.pathname;
+        this.logger['id'] = this._id;
     }
 
     public static MAX_BODY_SIZE = 0xfffff;
@@ -100,6 +103,7 @@ export class RequestContext {
                 let collectedChunksSize = BigInt(0);
 
                 this._req.on('data', (data: Buffer) => {
+                    this.logger.spam(`Received ${data.byteLength} bytes of data`);
                     collectedChunksSize += BigInt(data.byteLength);
                     if (collectedChunksSize < RequestContext.MAX_BODY_SIZE) {
                         chunks.push(data);
@@ -111,6 +115,8 @@ export class RequestContext {
                 });
 
                 this._req.on('end', () => {
+                    this.logger.spam(`End of data`);
+
                     if (detectedError) {
                         for (let group of this._bufferQueue) {
                             group[1](detectedError);
@@ -125,6 +131,18 @@ export class RequestContext {
                 });
             }
         });
+    }
+
+    get jsonBody(): Promise<any> {
+        return this.rawBody
+            .then(body => {
+                try {
+                    return JSON.parse(body.toString('utf-8'));
+                } catch (err) {
+                    this.logger.spam(`Failed to parse body: '${body}'`);
+                    throw new InvalidRequestError('Failed to parse body as JSON');
+                }
+            });
     }
 
     get hasSearch(): boolean {
@@ -169,5 +187,9 @@ export class RequestContext {
             }
             this._pathVariables.set(key, vars.get(key));
         }
+    }
+
+    setHeader(name: string, value: string) {
+        this._res.setHeader(name, value);
     }
 }

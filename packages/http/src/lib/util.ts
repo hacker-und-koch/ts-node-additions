@@ -39,3 +39,7 @@ export function evaluatePathVariables(template: string, path: string) {
 export function isVariableSegment(segment: string): boolean {
     return /^\{[^\{\}]+\}$/.test(segment);
 }
+
+export const tnaHttpVersion = JSON.parse(
+    require('fs').readFileSync(__dirname + '/../../package.json').toString()
+).version;

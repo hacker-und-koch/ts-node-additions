@@ -1,6 +1,6 @@
 import { Injectable, Inject, Providers, OnConfigure } from '@hacker-und-koch/di';
 import { Logger } from '@hacker-und-koch/logger';
-import { MethodNotAllowedError } from './errors';
+import { MethodNotAllowedError, NotFoundError } from './errors';
 import { RouteDecorated } from './decorators';
 import { Default404Route } from './default-404.route';
 import { RouteOptions } from './models';
@@ -74,7 +74,11 @@ export class RequestHandler implements OnConfigure {
     protected async handleRequest(ctx: RequestContext): Promise<any> {
         this.logger.info(`Handling request ${ctx.id}`);
         ctx.announcePathSegmentAsEvaluated(this.handledPath);
-
+        if (this.reflectedOptions?.setHeaders) {
+            for (let key in this.reflectedOptions?.setHeaders) {
+                ctx.setHeader(key, this.reflectedOptions?.setHeaders[key]);
+            }
+        }
         this.logger.spam('Checking children:', this.handlers.map(h => h.logger.className));
         for (let handler of this.handlers) {
             this.logger.spam('Checking', handler.logger.className);
@@ -85,6 +89,9 @@ export class RequestHandler implements OnConfigure {
         }
 
         this.logger.spam('No child handler is taking care. gotta do it on my own.');
+        if (ctx.pathToEvaluate.length > 0 && this.reflectedOptions?.matchExact) {
+            throw new NotFoundError();
+        }
         if (this.methods.indexOf(ctx.method) < 0) {
             throw new MethodNotAllowedError();
         }

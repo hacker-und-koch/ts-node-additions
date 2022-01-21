@@ -9,6 +9,7 @@ import { Server, ServerConfiguration } from './server';
 import { RequestHandler } from './request-handler';
 import { Default404Route } from './default-404.route';
 import { RequestContext } from './request-context';
+import { tnaHttpVersion } from './util';
 
 export interface RouterConfiguration extends ServerConfiguration {
     maxRequestMs?: number;
@@ -51,9 +52,18 @@ export class Router extends RequestHandler implements OnConfigure, OnInit {
     }
 
     async kickOfHandling(req: IncomingMessage, res: ServerResponse) {
-        const context = new RequestContext(req, res);
+        const context = new RequestContext(
+            req,
+            res,
+            Logger.build()
+                .copySettingsFrom(this.logger)
+                .className('RequestContext')
+                .create()
+        );
 
-        this.logger.spam(`Kicking off request ${context.id}`)
+        context.setHeader('TNA-HTTP-Version',tnaHttpVersion);
+
+        this.logger.log(`Kicking off request ${context.id}`)
         const timeout = setTimeout(() => {
             this.logger.warn(`Closing request ${context.id} because of timeout (${this.configuration.maxRequestMs})`);
             context.error = new RequestTimeoutError();
@@ -62,7 +72,7 @@ export class Router extends RequestHandler implements OnConfigure, OnInit {
         context.addErrorCallback(() => clearTimeout(timeout));
 
         res.on('finish', () => {
-            this.logger.spam(`Request ${context.id} finished with ${res.statusCode}.`);
+            this.logger.log(`Response ${context.id} finished with ${res.statusCode}.`);
             clearTimeout(timeout)
         });
 
@@ -81,7 +91,16 @@ export class Router extends RequestHandler implements OnConfigure, OnInit {
         }
 
         if (body !== undefined) {
-            res.write(Buffer.from(body));
+            if (typeof body === 'object' && !Buffer.isBuffer(body)) {
+                if (!res.getHeader('Content-Type')) {
+                    res.setHeader('Content-Type', 'application/json');
+                }
+                this.logger.spam('Stringifying object body:', body);
+                body = Buffer.from(JSON.stringify(body));
+            }
+            body = Buffer.from(body);
+            res.setHeader('Content-Length', body.byteLength);
+            res.write(body);
         }
 
         res.end();

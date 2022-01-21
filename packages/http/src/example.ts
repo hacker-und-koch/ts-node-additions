@@ -8,11 +8,16 @@ import {
     Route,
     RouterConfiguration,
     RequestContext,
+    NotFoundError,
 } from './lib';
 
 
 @Route({
     path: '/hi',
+    setHeaders: {
+        'Custom-Foo': 'BarBaz'
+    },
+    matchExact: true,
 })
 class SomeRoute extends RequestHandler {
     async handle(ctx: RequestContext): Promise<string> {
@@ -29,8 +34,19 @@ class SomeRoute extends RequestHandler {
     methods: ['GET', 'POST']
 })
 class ValuesRoute extends RequestHandler {
+    private storage = new Map<string, any>();
     async handle(ctx: RequestContext) {
-        return `Nice ${ctx.method} for ${ctx.pathVariables.get('id')}!`;
+        const id = ctx.pathVariables.get('id');
+        if (ctx.method === 'POST') {
+            const body = await ctx.jsonBody;
+            this.logger.log(`Setting ${id} to`, body);
+            this.storage.set(id, body);
+            return { success: true }
+        }
+        if (this.storage.has(id)) {
+            return this.storage.get(id);
+        }
+        throw new NotFoundError('Unknown ID');
     }
 }
 
