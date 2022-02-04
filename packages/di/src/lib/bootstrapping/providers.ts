@@ -105,10 +105,10 @@ export class Providers {
             callShutdown();
         });
 
-        //catches uncaught exceptions
+        //catches otherwise uncaught exceptions
         process.once('uncaughtException', (err) => {
-            this.logger.error(err);
-            this.logger.warn('Shutting down because of error.')
+            this.logger.error('Uncaught exception in spawned instance:', err, err.stack);
+            this.logger.warn('Initiating shutdown of all instances');
             callShutdown(1);
         });
         const self = this;
