@@ -19,7 +19,6 @@
         "example:worker-and-app": "node bin/examples/worker-and-app",
         "clean": "rm -r ./bin ./declarations",
         "clean:full": "rm -r ./bin ./declarations ./node_modules"
-
     },
     "repository": {
         "type": "git",
@@ -34,7 +33,7 @@
     },
     "devDependencies": {
         "@types/jasmine": "^3.5.5",
-        "@types/node": "^13.7.2",
+        "@types/node": "16",
         "jasmine": "^3.5.0",
         "nodemon": "^2.0.2",
         "typescript": "^3.7.5"
