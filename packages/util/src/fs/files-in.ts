@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import { stat } from '.';
+import { stat } from './stat';;
 import * as path from 'path';
 import { arrflat } from '../transform';
 import * as Async from '../async';

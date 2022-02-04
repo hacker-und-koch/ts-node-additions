@@ -7,6 +7,8 @@
         "outDir": "bin/",
         "declaration": true,
         "baseUrl": "bin/",
+        "target": "es2020",
+        "module": "CommonJS",
         "lib": [
             "es2015"
         ]
