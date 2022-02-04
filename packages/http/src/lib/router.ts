@@ -63,7 +63,7 @@ export class Router extends RequestHandler implements OnConfigure, OnInit {
 
         context.setHeader('TNA-HTTP-Version', tnaHttpVersion);
 
-        this.logger.log(`Kicking off request ${context.id}`)
+        this.logger.info(`Kicking off request ${context.id}`)
         const timeout = setTimeout(() => {
             this.logger.warn(`Closing request ${context.id} because of timeout (${this.configuration.maxRequestMs})`);
             context.error = new RequestTimeoutError();
@@ -72,7 +72,7 @@ export class Router extends RequestHandler implements OnConfigure, OnInit {
         context.addErrorCallback(() => clearTimeout(timeout));
 
         res.on('finish', () => {
-            this.logger.log(`Response ${context.id} finished with ${res.statusCode}`);
+            this.logger.info(`Response ${context.id} finished with ${res.statusCode}`);
             clearTimeout(timeout)
         });
 
@@ -104,5 +104,9 @@ export class Router extends RequestHandler implements OnConfigure, OnInit {
         }
 
         res.end();
+    }
+
+    async shutdown() {
+        return this.server.shutdown();
     }
 }

@@ -5,4 +5,4 @@ export * from './router';
 export * from './request-handler';
 export * from './request-context';
 export * from './server';
-export * from './http-client';
+export * from './undici-client';

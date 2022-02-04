@@ -156,6 +156,10 @@ export class RequestContext {
         }
     }
 
+    get inboundHeaders() {
+        return this._req.headers;
+    }
+
     addErrorCallback(cb: ErrorCallback) {
         if (this._error) {
             cb(this._error);

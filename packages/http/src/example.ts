@@ -1,6 +1,6 @@
 import { Application, bootstrap, OnReady, Injectable, config, Inject } from '@hacker-und-koch/di';
 import { Logger } from '@hacker-und-koch/logger';
-import { runInThisContext } from 'vm';
+import { equal as assertEqual } from 'assert/strict';
 
 import {
     InvalidRequestError,
@@ -10,9 +10,8 @@ import {
     RouterConfiguration,
     RequestContext,
     NotFoundError,
-    HttpClient,
-    HttpClientConfiguration,
-    request,
+    UndiciClient,
+    UndiciClientOptions,
 } from './lib';
 
 
@@ -24,11 +23,16 @@ import {
     matchExact: true,
 })
 class SomeRoute extends RequestHandler {
+
+    // assign handler function
     async handle(ctx: RequestContext): Promise<string> {
+        // generate arbitrary error when search params are detected
         if (ctx.hasSearch) {
             this.logger.log('Query params:', ctx.search);
             throw new InvalidRequestError('DemoError: Not supporting query params');
         }
+
+        // reply kindly
         return 'hello, planet!';
     }
 }
@@ -38,18 +42,37 @@ class SomeRoute extends RequestHandler {
     methods: ['GET', 'POST']
 })
 class ValuesRoute extends RequestHandler {
+    // create pseudo storage
     private storage = new Map<string, any>();
+
     async handle(ctx: RequestContext) {
+        // get 'id' variable
         const id = ctx.pathVariables.get('id');
+        
+        this.logger.info('Headers:', ctx.inboundHeaders);
+
+        // handle POST
         if (ctx.method === 'POST') {
+            // get body
             const body = await ctx.jsonBody;
             this.logger.log(`Setting ${id} to`, body);
+
+
+            // set in pseudo storage
             this.storage.set(id, body);
+
+            // set response code
+            ctx.status = 201;
+
+            // reply success
             return { success: true }
         }
+
+        // return value if present
         if (this.storage.has(id)) {
             return this.storage.get(id);
         }
+
         throw new NotFoundError('Unknown ID');
     }
 }
@@ -61,7 +84,7 @@ class ValuesRoute extends RequestHandler {
     ],
 })
 class ApiRoute extends RequestHandler {
-
+    // just a container for Values Route
 }
 
 @Injectable()
@@ -70,8 +93,7 @@ export class Default404Route /* DO NOT EXTEND REQUESTHANDLER!! */ {
     async handle(ctx: RequestContext): Promise<string> {
         ctx.status = 404;
 
-        // todo: parse from Route decorator or something
-        ctx.original.res.setHeader('content-type', 'text/html');
+        ctx.setHeader('Content-Type', 'text/html;charset=utf-8');
 
         return 'Not found. <a href="/hi">try</a>';
     }
@@ -84,7 +106,7 @@ export class Default404Route /* DO NOT EXTEND REQUESTHANDLER!! */ {
         Default404Route,
         ApiRoute,
         ValuesRoute,
-        HttpClient,
+        UndiciClient,
     ],
     configs: [
         config<RouterConfiguration>(Router, {
@@ -93,42 +115,50 @@ export class Default404Route /* DO NOT EXTEND REQUESTHANDLER!! */ {
                 ApiRoute,
             ]
         }),
-        config<HttpClientConfiguration>(HttpClient, {
-            // url
-
-            baseUrl: 'http://localhost:8080',
-            // defaultMethod: 'POST',
-        }, 'example-1')
+        config<UndiciClientOptions>(UndiciClient, {
+            url: 'http://localhost:8080',
+            options: {
+                method: 'GET',
+                headers: {
+                    'Demo-App': 'active'
+                }
+            }
+        }, 'req-1')
     ]
 
 })
 class App implements OnReady {
-    constructor(private router: Router, private logger: Logger) {}
+    constructor(private router: Router, private logger: Logger) { }
 
-    @Inject(HttpClient, 'example-1')
-    private exampleRequestOne: HttpClient;
+    @Inject(UndiciClient, 'req-1')
+    private undici: UndiciClient;
 
     async onReady() {
         this.logger.log('ready');
-        try {
-            this.logger.log(await this.exampleRequestOne.call('http://localhost:8080/hi').body);
-        } catch(err) {
-            this.logger.warn('Failed to make request:', err);
-        }
-        // this.logger.log(
-        //     request('http://localhost:8080/api/values/foo', {
-        //         method: 'POST'
-        //     }, {
-        //         a: 'b'
-        //     }).body
-        // );
+
+        this.logger.log('Request finished:', (await this.undici.request('/hi')).statusCode);
+
+        const createStatus = (await this.undici.request('/api/values/foo', {
+            method: 'POST',
+            body: JSON.stringify({ lorem: 'ipsum' }),
+        })).statusCode;
+
+        assertEqual(createStatus, 201);
+
+        const value = await (
+            await this.undici.request('/api/values/foo')
+        ).body.json();
+
+        this.logger.log('Did read value:', value);
+
+        this.router.shutdown();
     }
 }
 
 bootstrap(App, {
     log: {
         '*': 'info',
-        'Router': 'spam',
+        Router: 'spam',
         ApiRoute: 'spam',
         RequestHandler: 'spam',
     },
