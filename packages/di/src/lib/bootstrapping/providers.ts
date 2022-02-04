@@ -180,7 +180,7 @@ export class Providers {
     }
 
     public announceInstanceCreation() {
-        while(this.instances.find(pkg => !pkg.creationAnnounced)) {
+        while (this.instances.find(pkg => !pkg.creationAnnounced)) {
             for (let pkg of this.instances) {
                 if (!('_tnaOnInstancesCreated' in pkg.instance)) {
                     pkg.creationAnnounced = true;
@@ -196,7 +196,6 @@ export class Providers {
     }
 
     private async applyConfigurations(instances: InstancePackage<OnConfigure & ConfigurationProvider & IInjectable>[]): Promise<void> {
-
         for (const instance of instances) {
             await this.applyConfiguration(instance);
         }
@@ -208,10 +207,8 @@ export class Providers {
             throw new BootstrapPhaseError(`Trying to configure ${instance.provides}${instance.id ? '[' + instance.id : ']'} which has already been touched`);
         }
 
-
         const matching_conf = this.gimmeConfiguration(instance);
         const conf_key_package = instance.instance.__tna_di_configuration_key__;
-
         if (conf_key_package && !matching_conf && !conf_key_package.defaultConfiguration) {
 
             const err_text = `${instance.provides}` +
@@ -225,6 +222,10 @@ export class Providers {
         instance.initState = 'configuring';
 
         if (conf_key_package) {
+            this.logger.spam(`${instance.provides} desires injected config`);
+            if (matching_conf) {
+                this.logger.spam(`Did find matching config for ${instance.provides} in settings`);
+            }
             // naivly try to overwrite instances config key
             (instance.instance as any)[conf_key_package.propertyKey] = {
                 // apply default
@@ -237,7 +238,7 @@ export class Providers {
         }
 
         if (typeof instance.instance.onConfigure == 'function') {
-            this.logger.spam(`Starting to configure ${instance.provides}${instance.id ? '[' + instance.id + ']' : ''}`);
+            this.logger.spam(`Calling onConfigure on ${instance.provides}${instance.id ? '[' + instance.id + ']' : ''}`);
 
             await instance.instance.onConfigure.apply(instance.instance);
 
@@ -267,11 +268,14 @@ export class Providers {
     }
 
     private gimmeConfiguration(instance: InstancePackage<any>) {
-        return this.options.configurations
-            .find(conf =>
+        for (let conf of this.options.configurations) {
+            if (
                 conf.forModule === instance.provides
-                && conf.id === instance.id
-            );
+                && (instance.id ? conf.id === instance.id : true)
+            ) {
+                return conf;
+            }
+        }
     }
 
     async initInstances() {

@@ -3,7 +3,7 @@ import { Eventbus } from "./eventbus";
 
 describe('Eventbus', () => {
     it('forwards messages', async (done) => {
-        const step_tester: StepTester<Eventbus<'test', number>> = await StepTester.withTarget(Eventbus).build();
+        const step_tester: StepTester<Eventbus<'test', number>> = await StepTester.withTarget(Eventbus).build() as StepTester<Eventbus<'test', number>>;
         
         step_tester.instance.on('test', d => {
             expect(d).toBe(5);
