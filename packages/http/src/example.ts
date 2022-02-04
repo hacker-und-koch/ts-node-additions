@@ -1,5 +1,6 @@
-import { Application, bootstrap, OnReady, Injectable, config } from '@hacker-und-koch/di';
+import { Application, bootstrap, OnReady, Injectable, config, Inject } from '@hacker-und-koch/di';
 import { Logger } from '@hacker-und-koch/logger';
+import { runInThisContext } from 'vm';
 
 import {
     InvalidRequestError,
@@ -9,6 +10,9 @@ import {
     RouterConfiguration,
     RequestContext,
     NotFoundError,
+    HttpClient,
+    HttpClientConfiguration,
+    request,
 } from './lib';
 
 
@@ -80,6 +84,7 @@ export class Default404Route /* DO NOT EXTEND REQUESTHANDLER!! */ {
         Default404Route,
         ApiRoute,
         ValuesRoute,
+        HttpClient,
     ],
     configs: [
         config<RouterConfiguration>(Router, {
@@ -87,16 +92,36 @@ export class Default404Route /* DO NOT EXTEND REQUESTHANDLER!! */ {
                 SomeRoute,
                 ApiRoute,
             ]
-        })
+        }),
+        config<HttpClientConfiguration>(HttpClient, {
+            // url
+
+            baseUrl: 'http://localhost:8080',
+            // defaultMethod: 'POST',
+        }, 'example-1')
     ]
+
 })
 class App implements OnReady {
-    constructor(private router: Router, private logger: Logger) {
+    constructor(private router: Router, private logger: Logger) {}
 
-    }
+    @Inject(HttpClient, 'example-1')
+    private exampleRequestOne: HttpClient;
 
-    onReady() {
+    async onReady() {
         this.logger.log('ready');
+        try {
+            this.logger.log(await this.exampleRequestOne.call('http://localhost:8080/hi').body);
+        } catch(err) {
+            this.logger.warn('Failed to make request:', err);
+        }
+        // this.logger.log(
+        //     request('http://localhost:8080/api/values/foo', {
+        //         method: 'POST'
+        //     }, {
+        //         a: 'b'
+        //     }).body
+        // );
     }
 }
 
