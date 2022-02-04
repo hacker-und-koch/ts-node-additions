@@ -38,6 +38,8 @@ async function run(argv, debug) {
 
     const command = argv.shift();
 
+    const commandArgs = argv.map(arg => `packages/${arg}`);
+
     switch (command) {
         case undefined:
             break;
@@ -47,10 +49,10 @@ async function run(argv, debug) {
             await test();
             break;
         case "build":
-            await build(argv.map(arg => `packages/${arg}`));
+            await build(commandArgs);
             break;
         case "test":
-            await test(argv.map(arg => `packages/${arg}`));
+            await test(commandArgs);
             break;
         case "version":
             await version();
@@ -58,9 +60,16 @@ async function run(argv, debug) {
         case "release":
             await release();
             break;
+        case "clean":
+            await clean(commandArgs);
+            break;
+        case "clean:full":
+            await clean(commandArgs, true);
+            break;
     }
 
     return command;
+   
     async function install() {
         return yarn(['install']);
     }
@@ -71,6 +80,10 @@ async function run(argv, debug) {
 
     async function test(workspaces) {
         return runCommandInWorkspaces('yarn', 'test', workspaces);
+    }
+
+    async function clean(workspaces, full) {
+        return runCommandInWorkspaces('yarn', `clean${full ? ':full' : ''}`, workspaces);
     }
 
     async function version() {

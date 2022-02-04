@@ -1,9 +1,10 @@
 import { Providers, LoglevelOption } from "./providers";
 import { IApplication } from "./hooks/injectable";
 import { Injectable } from "../decorators";
+import { Configuration } from './configurations';
 
 export interface StepTesterOptions {
-    configurations?: any[];
+    configurations?: Configuration<unknown>[];
     declarations?: any[];
     options?: { [long_opt: string]: string };
     loglevel?: LoglevelOption;
@@ -42,7 +43,7 @@ export class StepTester<T> {
         const index = this.notCalled.indexOf("configure");
         if (index > -1) {
             this.notCalled.splice(index, 1);
-            await this.providers.configureInstances();
+            await this.providers.configureInstances.apply(this.providers);
         }
         return this.instance;
     }
@@ -81,15 +82,24 @@ export class StepTester<T> {
         return this.instance;
     }
 
+    spy(fn: keyof T) {
+        return spyOn(this.instance, fn as any).and.callThrough();
+    }
+
+    spyWithReturn(fn: keyof T, returnValue: any) {
+        return spyOn(this.instance, fn as any).and.returnValue(returnValue);
+    }
+
     static new<T>(): StepTesterBuilder<T> {
         return new StepTesterBuilder<T>();
     }
 
-    static withTarget<U>(target: U): StepTesterBuilder<any> {
-        return StepTester.new<any>()
+    static withTarget<T>(target: { new(...args: any[]): T }): StepTesterBuilder<T> {
+        return StepTester.new<T>()
             .target(target);
     }
 }
+
 export declare type RunphaseTarget = "not-at-all" | "configure" | "init" | "ready" | "destroy";
 export class StepTesterBuilder<T> {
 
@@ -102,7 +112,7 @@ export class StepTesterBuilder<T> {
         return this;
     }
 
-    runIntil(phase: RunphaseTarget): this {
+    runUntilAfter(phase: RunphaseTarget): this {
         this._runUntil = phase;
         return this;
     }

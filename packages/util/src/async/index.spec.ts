@@ -1,4 +1,4 @@
-import * as Async from ".";
+import * as Async from "./index";
 
 describe("Asnyc", () => {
     it("collects async functions calls", (done) => {

@@ -8,7 +8,7 @@ export interface RouteDecorated {
 
 export function Route(routeOptions?: RouteOptions) {
 
-    return function (target: typeof RequestHandler) {
+    return function (target: (typeof RequestHandler) & any) {
     
         Injectable()(target);
 

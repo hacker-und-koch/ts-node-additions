@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import { filesIn } from '.';
+import { filesIn } from './files-in';
 import * as path from 'path';
 
 export async function batchRename(directory: fs.PathLike, replace: RegExp, by: string): Promise<string[][]> {
@@ -8,7 +8,7 @@ export async function batchRename(directory: fs.PathLike, replace: RegExp, by: s
     // console.log(input_files);
 
     const movements: string[][] = await input_files
-        .map(file => {
+        .map((file: any) => {
             const info = path.parse(file);
 
             if (!replace.test(info.name)) {
@@ -29,7 +29,7 @@ export async function batchRename(directory: fs.PathLike, replace: RegExp, by: s
             ]
 
         })
-        .filter(x => x);
+        .filter((x: any) => x);
 
     for (let movement of movements) {
         console.log("RENAMING", movement);

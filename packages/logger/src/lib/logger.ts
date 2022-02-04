@@ -201,6 +201,15 @@ export class LoggerBuilder {
         return this;
     }
 
+    copySettingsFrom(template: Logger): this {
+        this._format = template['format'];
+        this._level = template['activeLogLevel'];
+        this._stdout = template['stdout'];
+        this._stderr = template['stderr'];
+
+        return this;
+    }
+
     /**
      * Calling this function will finish the building process. 
      * A new instance of `Logger` will be created and configured
@@ -238,12 +247,12 @@ export class LoggerBuilder {
 
     private defaultFormat(): FormatFunction {
         return (pkg: LoggerPackage) => {
-            let windowX = -1;
-            try {
-                windowX = this._stdout.getWindowSize()[0];
-            } catch (e) {
-                // ignore, since we can just print everything into one line.
-            }
+            // let windowX = -1;
+            // try {
+            //     windowX = this._stdout.getWindowSize()[0];
+            // } catch (e) {
+            //     // ignore, since we can just print everything into one line.
+            // }
 
             const rawOutput = (utilFormat as any)(...pkg.parts);
 
@@ -254,26 +263,27 @@ export class LoggerBuilder {
                     const timePart = this._noTimestamp ? '' : this.defaultTimestamp(pkg.time);
                     const timeUntilClass = `${timePart}${lvlPart}${pkg.class}${idPart}: `;
                     let formatedLine = line + '\n';
-                    if (windowX > 0) {
-                        const maxTextWidth = windowX - timeUntilClass.length;
-                        const lines = [];
-                        for (let segment of line.split(' ')) {
-                            let idx = lines.length - 1;
-                            if (idx < 0) {
-                                lines.push(segment);
-                            } else if ((lines[idx].length + segment.length + 1) > maxTextWidth) {
-                                lines.push(segment);
-                            } else {
-                                lines[idx] += ` ${segment}`;
-                            }
-                        }
-                        formatedLine = lines.reduce((acc, cur, idx) => {
-                            if (idx > 0) {
-                                cur = cur.padStart(timeUntilClass.length + cur.length);
-                            }
-                            return `${acc}${cur}\n`;
-                        }, '');
-                    }
+                    // feature is somewhat nice, but not quite usefull yet
+                    // if (windowX > 0) {
+                    //     const maxTextWidth = windowX - timeUntilClass.length;
+                    //     const lines = [];
+                    //     for (let segment of line.split(' ')) {
+                    //         let idx = lines.length - 1;
+                    //         if (idx < 0) {
+                    //             lines.push(segment);
+                    //         } else if ((lines[idx].length + segment.length + 1) > maxTextWidth) {
+                    //             lines.push(segment);
+                    //         } else {
+                    //             lines[idx] += ` ${segment}`;
+                    //         }
+                    //     }
+                    //     formatedLine = lines.reduce((acc, cur, idx) => {
+                    //         if (idx > 0) {
+                    //             cur = cur.padStart(timeUntilClass.length + cur.length);
+                    //         }
+                    //         return `${acc}${cur}\n`;
+                    //     }, '');
+                    // }
                     return `${timeUntilClass}${formatedLine}`;
                 })
                 .join('');

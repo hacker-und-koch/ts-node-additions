@@ -1,9 +1,11 @@
 import { GetOpt, GetOptOption, GetOptConfiguration } from '@hacker-und-koch/getopt';
+import { Logger, Loglevel } from '@hacker-und-koch/logger';
+
 import { ConfigurationProvider, Configuration } from './configurations';
 import { OnConfigure, OnInit, OnReady, OnDestroy } from './hooks';
-import { BootstrapPhaseError, MissingDeclarationError, MissingConfigurationError, UnspecificConfigError } from '../errors';
+import { BootstrapPhaseError, MissingDeclarationError, MissingConfigurationError, UnspecificConfigError, UnknownInstanceError, } from '../errors';
 import { IInjectable, IApplication } from './hooks/injectable';
-import { Logger, Loglevel } from '@hacker-und-koch/logger';
+import { HookState } from './models';
 
 export type LoglevelOption = Loglevel | { [className: string]: Loglevel };
 
@@ -20,22 +22,13 @@ export interface TemplatePackage {
     declaredBy: string;
 }
 
-export declare type HookState =
-    'unset'
-    | 'configuring'
-    | 'configured'
-    | 'initializing'
-    | 'initialized'
-    | 'ready'
-    | 'destroying'
-    | 'destroyed';
-
 export interface InstancePackage<T> {
     provides: string;
     instance: T;
     id: string;
     consumes: { token: string; id: null }[];
     initState: HookState;
+    creationAnnounced?: boolean;
 }
 
 export class Providers {
@@ -112,10 +105,10 @@ export class Providers {
             callShutdown();
         });
 
-        //catches uncaught exceptions
+        //catches otherwise uncaught exceptions
         process.once('uncaughtException', (err) => {
-            this.logger.error(err);
-            this.logger.warn('Shutting down because of error.')
+            this.logger.error('Uncaught exception in spawned instance:', err, err.stack);
+            this.logger.warn('Initiating shutdown of all instances');
             callShutdown(1);
         });
         const self = this;
@@ -186,8 +179,23 @@ export class Providers {
         this.logger.info(`Done configuring`);
     }
 
-    private async applyConfigurations(instances: InstancePackage<OnConfigure & ConfigurationProvider & IInjectable>[]): Promise<void> {
+    public announceInstanceCreation() {
+        while (this.instances.find(pkg => !pkg.creationAnnounced)) {
+            for (let pkg of this.instances) {
+                if (!('_tnaOnInstancesCreated' in pkg.instance)) {
+                    pkg.creationAnnounced = true;
+                    continue;
+                }
+                if (!pkg.creationAnnounced) {
+                    let self = this;
+                    pkg.instance._tnaOnInstancesCreated.apply(pkg.instance, [self.gimmeConfiguration(pkg)?.config, self]);
+                    pkg.creationAnnounced = true;
+                }
+            }
+        }
+    }
 
+    private async applyConfigurations(instances: InstancePackage<OnConfigure & ConfigurationProvider & IInjectable>[]): Promise<void> {
         for (const instance of instances) {
             await this.applyConfiguration(instance);
         }
@@ -199,14 +207,8 @@ export class Providers {
             throw new BootstrapPhaseError(`Trying to configure ${instance.provides}${instance.id ? '[' + instance.id : ']'} which has already been touched`);
         }
 
-
-        const matching_conf = this.options.configurations
-            .find(conf =>
-                conf.forModule === instance.provides
-                && conf.id === instance.id
-            );
+        const matching_conf = this.gimmeConfiguration(instance);
         const conf_key_package = instance.instance.__tna_di_configuration_key__;
-
         if (conf_key_package && !matching_conf && !conf_key_package.defaultConfiguration) {
 
             const err_text = `${instance.provides}` +
@@ -220,10 +222,14 @@ export class Providers {
         instance.initState = 'configuring';
 
         if (conf_key_package) {
+            this.logger.spam(`${instance.provides} desires injected config`);
+            if (matching_conf) {
+                this.logger.spam(`Did find matching config for ${instance.provides} in settings`);
+            }
             // naivly try to overwrite instances config key
             (instance.instance as any)[conf_key_package.propertyKey] = {
                 // apply default
-                ...conf_key_package.defaultConfiguration, 
+                ...conf_key_package.defaultConfiguration,
                 // if present use previously existing value
                 ...(instance.instance as any)[conf_key_package.propertyKey],
                 // if present use current config
@@ -232,7 +238,7 @@ export class Providers {
         }
 
         if (typeof instance.instance.onConfigure == 'function') {
-            this.logger.spam(`Starting to configure ${instance.provides}${instance.id ? '[' + instance.id + ']' : ''}`);
+            this.logger.spam(`Calling onConfigure on ${instance.provides}${instance.id ? '[' + instance.id + ']' : ''}`);
 
             await instance.instance.onConfigure.apply(instance.instance);
 
@@ -259,6 +265,17 @@ export class Providers {
             ];
         }
         return;
+    }
+
+    private gimmeConfiguration(instance: InstancePackage<any>) {
+        for (let conf of this.options.configurations) {
+            if (
+                conf.forModule === instance.provides
+                && (instance.id ? conf.id === instance.id : true)
+            ) {
+                return conf;
+            }
+        }
     }
 
     async initInstances() {
@@ -336,7 +353,14 @@ export class Providers {
         return destructionErrors;
     }
 
-
+    getInstanceState(instance: any): HookState {
+        const knownPackage = this.instances.find(pkg => pkg.instance === instance);
+        if (!knownPackage) {
+            throw new UnknownInstanceError();
+        }
+        const state = knownPackage?.initState;
+        return state || 'unset';
+    }
 
     gimme(instance: string, caller: string): any
     gimme(instance: any, caller: string): any
@@ -473,6 +497,10 @@ export class Providers {
         }
     }
 
+    instancePackageContaining(instance: any) {
+        return this.instances.find(pkg => pkg.instance === instance);
+    }
+
     createInstance(target: any, args: any[]) {
         return new target(...args);
     }
@@ -501,6 +529,6 @@ export class Providers {
     }
 
     private logLevelOf(classIdentifier: string): Loglevel {
-        return Providers.logLevelIn(classIdentifier, this.options.loglevels as {[key: string]: Loglevel});
+        return Providers.logLevelIn(classIdentifier, this.options.loglevels as { [key: string]: Loglevel });
     }
 }

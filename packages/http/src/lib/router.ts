@@ -1,18 +1,19 @@
 import { randomBytes } from 'crypto';
 import { IncomingMessage, ServerResponse } from 'http';
-import { URL } from 'url';
 
-import { Injectable, InjectConfiguration, Inject, OnConfigure, OnInit, Providers } from '@hacker-und-koch/di';
+import { Injectable, InjectConfiguration, Inject, OnConfigure, OnInit, Providers, HookState, UnknownInstanceError } from '@hacker-und-koch/di';
 import { Logger } from '@hacker-und-koch/logger';
 
-import { HandlingError } from './errors';
-import { Response, Request } from './models';
+import { HttpError, RequestTimeoutError } from './errors';
 import { Server, ServerConfiguration } from './server';
 import { RequestHandler } from './request-handler';
 import { Default404Route } from './default-404.route';
+import { RequestContext } from './request-context';
+import { tnaHttpVersion } from './util';
 
-export interface RouterOptions extends ServerConfiguration {
-    maxRequestSeconds?: number;
+export interface RouterConfiguration extends ServerConfiguration {
+    maxRequestMs?: number;
+    handlers?: (typeof RequestHandler)[]
 }
 
 @Injectable({
@@ -23,12 +24,13 @@ export interface RouterOptions extends ServerConfiguration {
 })
 export class Router extends RequestHandler implements OnConfigure, OnInit {
 
-    @InjectConfiguration<RouterOptions>({
+    @InjectConfiguration<RouterConfiguration>({
         host: '127.0.0.1',
         port: 8080,
-        maxRequestSeconds: 15 * 60 * 1e3,
+        maxRequestMs: 15 * 60 * 1e3,
+        handlers: []
     })
-    private configuration: RouterOptions;
+    private configuration: RouterConfiguration;
 
     @Inject(Server, randomBytes(16).toString('hex'))
     private server: Server;
@@ -42,6 +44,7 @@ export class Router extends RequestHandler implements OnConfigure, OnInit {
             ...this.configuration
         };
     }
+
     async onInit() {
         this.server.handler = (req, res) => {
             this.kickOfHandling.apply(this, [req, res]);
@@ -49,68 +52,61 @@ export class Router extends RequestHandler implements OnConfigure, OnInit {
     }
 
     async kickOfHandling(req: IncomingMessage, res: ServerResponse) {
-        const request: Request = this.genRequest(req);
-        const response: Response = this.genResponse(res);
+        const context = new RequestContext(
+            req,
+            res,
+            Logger.build()
+                .copySettingsFrom(this.logger)
+                .className('RequestContext')
+                .create()
+        );
 
-        this.logger.spam(`Handling request ${request.id}.`)
+        context.setHeader('TNA-HTTP-Version', tnaHttpVersion);
+
+        this.logger.info(`Kicking off request ${context.id}`)
         const timeout = setTimeout(() => {
-            this.logger.warn(`Closing request ${request.id} because of timeout.`);
-            res.statusCode = 408;
-            res.end();
-        }, this.configuration.maxRequestSeconds);
+            this.logger.warn(`Closing request ${context.id} because of timeout (${this.configuration.maxRequestMs})`);
+            context.error = new RequestTimeoutError();
+        }, this.configuration.maxRequestMs);
+
+        context.addErrorCallback(() => clearTimeout(timeout));
 
         res.on('finish', () => {
-            this.logger.spam(`Request ${request.id} finished with ${res.statusCode}.`);
+            this.logger.info(`Response ${context.id} finished with ${res.statusCode}`);
             clearTimeout(timeout)
         });
 
-        let body: unknown;
+        let body;
         try {
-            body = await this.handleRequest(request, response);
-        } catch (e) {
-            if (e instanceof HandlingError) {
-                res.statusCode = e.statusCode;
-                res.write(e.message);
-                this.logger.warn(`Request ${request.id} ran into a HandlingError`, e);
+            body = await this.handleRequest(context);
+        } catch (error) {
+            if (error instanceof HttpError) {
+                context.error = error;
+                this.logger.warn(`Request ${context.id} ran into an error: ${error.message}`);
             } else {
-                this.logger.error(`Failed to handle request ${request.id}`, e);
-                res.statusCode = 500;
+                this.logger.error(`Failed to handle request ${context.id}`, error);
+                context.error = new HttpError(error.message);
             }
-            res.end();
             return;
         }
 
-        if (typeof body !== 'undefined') {
-            res.write(Buffer.from(body));
+        if (body !== undefined) {
+            if (typeof body === 'object' && !Buffer.isBuffer(body)) {
+                if (!res.getHeader('Content-Type')) {
+                    res.setHeader('Content-Type', 'application/json');
+                }
+                this.logger.spam('Stringifying object body:', body);
+                body = Buffer.from(JSON.stringify(body));
+            }
+            body = Buffer.from(body);
+            res.setHeader('Content-Length', body.byteLength);
+            res.write(body);
         }
 
         res.end();
     }
 
-    private genRequest(req: IncomingMessage): Request {
-        return {
-            _raw: req,
-            async body() { },
-            parsedUrl: new URL(req.url, 'http://localhost'),
-            id: randomBytes(4).toString('hex'), // low entropy :(
-            parameters: {}
-        };
-    }
-
-    private genResponse(res: ServerResponse): Response {
-        const result = {
-            _raw: res,
-            status: (code: number) => {
-                res.statusCode = code;
-                return result;
-            },
-            headers: (headers: { [key: string]: string }) => {
-                for (let name of Object.keys(headers)) {
-                    res.setHeader(name, headers[name]);
-                }
-                return result;
-            }
-        };
-        return result;
+    async shutdown() {
+        return this.server.shutdown();
     }
 }
