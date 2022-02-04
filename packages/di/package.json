@@ -16,7 +16,10 @@
         "example:hooks": "node bin/examples/hooks",
         "example:logger": "node bin/examples/logger",
         "example:shared-instance": "node bin/examples/shared-instance",
-        "example:worker-and-app": "node bin/examples/worker-and-app"
+        "example:worker-and-app": "node bin/examples/worker-and-app",
+        "clean": "rm -r ./bin ./declarations",
+        "clean:full": "rm -r ./bin ./declarations ./node_modules"
+
     },
     "repository": {
         "type": "git",

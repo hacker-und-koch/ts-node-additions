@@ -10,7 +10,9 @@
         "build": "tsc",
         "build:watch": "tsc --watch",
         "test": "jasmine",
-        "test:watch": "npx nodemon --exec jasmine"
+        "test:watch": "npx nodemon --exec jasmine",
+        "clean": "rm -r ./bin ./declarations",
+        "clean:full": "rm -r ./bin ./declarations ./node_modules"
     },
     "repository": {
         "type": "git",

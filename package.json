@@ -11,7 +11,10 @@
     "build": "node .run.js build",
     "test": "node .run.js test",
     "setup": "node .run.js setup",
-    "release": "node .run.js release"
+    "release": "node .run.js release",
+    "clean": "node .run.js clean",
+    "clean:full": "node .run.js clean:full",
+    "install": "node .run.js build && node .run.js test"
   },
   "workspaces": [
     "packages/getopt",
