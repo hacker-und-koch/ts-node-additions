@@ -12,6 +12,8 @@ import {
     NotFoundError,
     UndiciClient,
     UndiciClientOptions,
+    Get,
+    Post,
 } from './lib';
 
 
@@ -23,9 +25,9 @@ import {
     matchExact: true,
 })
 class SomeRoute extends RequestHandler {
-
     // assign handler function
-    async handle(ctx: RequestContext): Promise<string> {
+    @Get
+    async greet(ctx: RequestContext): Promise<string> {
         // generate arbitrary error when search params are detected
         if (ctx.hasSearch) {
             this.logger.log('Query params:', ctx.search);
@@ -39,34 +41,15 @@ class SomeRoute extends RequestHandler {
 
 @Route({
     path: '/values/{id}',
-    methods: ['GET', 'POST']
 })
 class ValuesRoute extends RequestHandler {
     // create pseudo storage
     private storage = new Map<string, any>();
 
-    async handle(ctx: RequestContext) {
+    @Get
+    async readValue(ctx: RequestContext) {
         // get 'id' variable
         const id = ctx.pathVariables.get('id');
-        
-        this.logger.info('Headers:', ctx.inboundHeaders);
-
-        // handle POST
-        if (ctx.method === 'POST') {
-            // get body
-            const body = await ctx.jsonBody;
-            this.logger.log(`Setting ${id} to`, body);
-
-
-            // set in pseudo storage
-            this.storage.set(id, body);
-
-            // set response code
-            ctx.status = 201;
-
-            // reply success
-            return { success: true }
-        }
 
         // return value if present
         if (this.storage.has(id)) {
@@ -74,6 +57,27 @@ class ValuesRoute extends RequestHandler {
         }
 
         throw new NotFoundError('Unknown ID');
+    }
+    
+    @Post
+    async setValue(ctx: RequestContext) {
+        // get 'id' variable
+        const id = ctx.pathVariables.get('id');
+
+        this.logger.info('Headers:', ctx.inboundHeaders);
+
+        // get body
+        const body = await ctx.jsonBody;
+        this.logger.log(`Setting '${id}' to`, body);
+
+        // set in pseudo storage
+        this.storage.set(id, body);
+
+        // set response code
+        ctx.status = 201;
+
+        // reply success
+        return { success: true }
     }
 }
 
@@ -157,9 +161,9 @@ class App implements OnReady {
 
 bootstrap(App, {
     log: {
-        '*': 'info',
-        Router: 'spam',
-        ApiRoute: 'spam',
-        RequestHandler: 'spam',
+        '*': 'log',
+        // Router: 'spam',
+        // ApiRoute: 'spam',
+        // RequestHandler: 'spam',
     },
 });

@@ -1,7 +1,7 @@
 import { Injectable, Option, OnInit, OnDestroy, Configuration, InjectConfiguration } from "@hacker-und-koch/di";
 import { Logger } from "@hacker-und-koch/logger";
 import { Server as HttpServer, ServerResponse, IncomingMessage } from 'http';
-import { Socket } from "dgram";
+import { Socket } from "net";
 
 export interface ServerConfiguration {
     host?: string;
@@ -33,6 +33,10 @@ export class Server implements OnInit, OnDestroy {
         this.handle = fn;
     }
 
+    get url() {
+        return this.server.address();
+    }
+
     private handle(req: IncomingMessage, res: ServerResponse) {
         res.statusCode = 500;
         res.write('No handler defined!');
@@ -41,6 +45,7 @@ export class Server implements OnInit, OnDestroy {
 
     private initializeServer(): Promise<void> {
         return new Promise((resolve, reject) => {
+            let resolved = false;
             this.server = new HttpServer((req: IncomingMessage, res: ServerResponse) => {
                 this.logger.spam(`${req.method} ${req.url}`);
                 this.handle(req, res);
@@ -62,6 +67,7 @@ export class Server implements OnInit, OnDestroy {
             this.server.listen(Number(port), host, () => {
                 this.logger.info(`Listening on http://${host}:${port}`);
                 this.listening = true;
+                resolved = true;
                 resolve();
             });
 
@@ -69,10 +75,10 @@ export class Server implements OnInit, OnDestroy {
                 this.logger.warn('Will shutdown Server because of an error.');
                 this.shutdown()
                     .then(() => {
-                        throw e;
+                        if (!resolved) reject(e);
+                        else throw e;
                     });
             });
-
         });
     }
 

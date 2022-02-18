@@ -1,5 +1,5 @@
 import { randomBytes } from 'crypto';
-import { IncomingMessage, ServerResponse } from 'http';
+import { IncomingMessage, OutgoingMessage, ServerResponse } from 'http';
 
 import { Injectable, InjectConfiguration, Inject, OnConfigure, OnInit, Providers, HookState, UnknownInstanceError } from '@hacker-und-koch/di';
 import { Logger } from '@hacker-und-koch/logger';
@@ -10,10 +10,23 @@ import { RequestHandler } from './request-handler';
 import { Default404Route } from './default-404.route';
 import { RequestContext } from './request-context';
 import { tnaHttpVersion } from './util';
+import { RouteTree } from './route-tree';
 
 export interface RouterConfiguration extends ServerConfiguration {
     maxRequestMs?: number;
     handlers?: (typeof RequestHandler)[]
+}
+
+export interface PathsOAS {
+    [path: string]: {
+        [method: string]: any;
+    }
+}
+
+interface PathsOASAccumulator {
+    out: PathsOAS,
+    currentSegment: string[];
+    currentObject: any;
 }
 
 @Injectable({
@@ -37,6 +50,30 @@ export class Router extends RequestHandler implements OnConfigure, OnInit {
 
     constructor(protected logger: Logger) {
         super(logger);
+    }
+
+    get pathsOAS(): PathsOAS {
+        return this.handlers.reduce((acc: PathsOASAccumulator, cur: RequestHandler) => {
+            acc.out[cur.path] = cur;
+            return acc;
+        }, {
+            out: {},
+            currentObject: {},
+            currentSegment: []
+        })
+            .out;
+    }
+
+    get tree(): RouteTree {
+        return new RouteTree(this);
+    }
+
+    get url(): string {
+        const url = this.server.url;
+        if (typeof url === 'string') {
+            return url;
+        }
+        return `${url.address}:${url.port}`;
     }
 
     async onConfigure() {

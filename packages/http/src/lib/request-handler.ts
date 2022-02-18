@@ -11,23 +11,32 @@ import { pathHasVariables, evaluatePathVariables } from './util';
 @Injectable()
 export class RequestHandler implements OnConfigure {
 
-    path: string;
-
-    protected handlers: RequestHandler[] = [];
-
     @Inject(Default404Route)
     protected defaultHandler: {
         handle: (ctx: RequestContext) => Promise<any>;
     };
 
-    constructor(protected logger: Logger) {
+    path: string;
+    protected handlers: RequestHandler[] = [];
 
-    }
+    constructor(protected logger: Logger) { }
 
-    handle(ctx: RequestContext): Promise<any> {
-        this.logger.info('Letting 404 handler take over.');
+    private handle(ctx: RequestContext): Promise<any> {
+        if (Object.keys(this.methodHandlers).length < 1) {
+            this.logger.info('Letting 404 handler take over.');
+            return this.defaultHandler.handle.apply(this.defaultHandler, [ctx]);
+        }
 
-        return this.defaultHandler.handle.apply(this.defaultHandler, [ctx]);
+        if (['GET', 'PUT', 'POST', 'DELETE'].indexOf(ctx.method) > -1) {
+            const methodKey = this.methodHandlers[ctx.method];
+            if (methodKey && methodKey in this) {
+                return (this as any)[methodKey].apply(this, [ctx]);
+            }
+        } else if (this.methodHandlers.ANY) {
+            return (this as any)[this.methodHandlers.ANY].apply(this, [ctx]);
+        }
+
+        throw new MethodNotAllowedError();
     }
 
     use(handler: RequestHandler): void;
@@ -44,12 +53,6 @@ export class RequestHandler implements OnConfigure {
             this.handlers.splice(idx, 1);
         }
     }
-
-    onGet?: () => any;
-    onPut?: () => any;
-    onPost?: () => any;
-    onDelete?: () => any;
-    onMethod?: (method: string) => any;
 
     private isPathRelevant(ctx: RequestContext, handler: RequestHandler): boolean {
         const requestedPath = ctx.pathToEvaluate;
@@ -92,9 +95,7 @@ export class RequestHandler implements OnConfigure {
         if (ctx.pathToEvaluate.length > 0 && this.reflectedOptions?.matchExact) {
             throw new NotFoundError();
         }
-        if (this.methods.indexOf(ctx.method) < 0) {
-            throw new MethodNotAllowedError();
-        }
+
         return this.handle.apply(this, [ctx]);
     }
 
@@ -118,14 +119,22 @@ export class RequestHandler implements OnConfigure {
         return ((this as any).__proto__.constructor as RouteDecorated)?.__tna_http_route_options__;
     }
 
-    protected get methods(): string[] {
-        const reflected = this.reflectedOptions?.methods;
-        if (reflected === undefined) {
-            this.logger.warn('No methods set. Defaulting to ["GET"]');
-        }
-        return reflected || ['GET'];
+    protected get methodHandlers(): { [method: string]: string } {
+        return (this as any).constructor.prototype.__tna_http_method_handlers__ || {};
     }
 
+    protected get methods(): string[] {
+        return Object.keys({
+            ...this.methodHandlers,
+            ...this.handlers.reduce((acc, cur) => ({
+                ...acc,
+                ...cur.methods.reduce((acc, cur) => ({
+                    ...acc,
+                    [cur]: true,
+                }), {})
+            }), {}),
+        });
+    }
 
     onConfigure() {
 
