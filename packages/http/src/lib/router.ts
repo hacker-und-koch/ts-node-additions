@@ -17,18 +17,6 @@ export interface RouterConfiguration extends ServerConfiguration {
     handlers?: (typeof RequestHandler)[]
 }
 
-export interface PathsOAS {
-    [path: string]: {
-        [method: string]: any;
-    }
-}
-
-interface PathsOASAccumulator {
-    out: PathsOAS,
-    currentSegment: string[];
-    currentObject: any;
-}
-
 @Injectable({
     declarations: [
         Server,
@@ -50,18 +38,6 @@ export class Router extends RequestHandler implements OnConfigure, OnInit {
 
     constructor(protected logger: Logger) {
         super(logger);
-    }
-
-    get pathsOAS(): PathsOAS {
-        return this.handlers.reduce((acc: PathsOASAccumulator, cur: RequestHandler) => {
-            acc.out[cur.path] = cur;
-            return acc;
-        }, {
-            out: {},
-            currentObject: {},
-            currentSegment: []
-        })
-            .out;
     }
 
     get tree(): RouteTree {

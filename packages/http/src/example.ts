@@ -138,7 +138,7 @@ class App implements OnReady {
     private undici: UndiciClient;
 
     async onReady() {
-        this.logger.log('ready');
+        this.logger.log('ready' + this.router.tree);
 
         this.logger.log('Request finished:', (await this.undici.request('/hi')).statusCode);
 

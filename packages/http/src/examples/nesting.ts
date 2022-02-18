@@ -68,8 +68,7 @@ class App implements OnReady {
     ) { }
 
     async onReady() {
-        this.logger.log(`Available routes: ${this.router.tree}`);
-        this.logger.log(this.router.tree.oas());
+        this.logger.log(this.router.tree + '');
     }
 }
 

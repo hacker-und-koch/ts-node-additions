@@ -7,6 +7,11 @@ import { RouteOptions } from './models';
 import { RequestContext } from './request-context';
 import { pathHasVariables, evaluatePathVariables } from './util';
 
+export interface PathsOAS {
+    [path: string]: {
+        [method: string]: any;
+    }
+}
 
 @Injectable()
 export class RequestHandler implements OnConfigure {
@@ -16,7 +21,6 @@ export class RequestHandler implements OnConfigure {
         handle: (ctx: RequestContext) => Promise<any>;
     };
 
-    path: string;
     protected handlers: RequestHandler[] = [];
 
     constructor(protected logger: Logger) { }
@@ -48,7 +52,7 @@ export class RequestHandler implements OnConfigure {
     unuse(handler: RequestHandler) {
         const idx = this.handlers.indexOf(handler);
         if (idx < 0) {
-            this.logger.error(`Trying to remove handler for path ${handler.path}, but it's not used.`);
+            this.logger.error(`Trying to remove handler for path ${handler.handledPath}, but it's not used.`);
         } else {
             this.handlers.splice(idx, 1);
         }
@@ -139,4 +143,45 @@ export class RequestHandler implements OnConfigure {
     onConfigure() {
 
     }
+
+    get allHandlers(): PathCollection {
+        return {
+            methods: Object.keys(this.methodHandlers),
+            paths: this.handlers.reduce((acc, handler) => {
+                return {
+                    ...acc,
+                    [handler.handledPath]: handler.allHandlers,
+                }
+            }, {})
+        }
+    }
+
+    get pathsOAS(): PathsOAS {
+        return collectionToOAS(this.allHandlers);
+    }
+}
+
+interface PathCollection {
+    methods: string[];
+    paths: { [key: string]: PathCollection };
+}
+
+function collectionToOAS(collection: PathCollection, prefix: string = '') {
+    let out: any = {};
+    for (let path in collection.paths) {
+        const actualPath = `${prefix}${path}`;
+        const methods = collection.paths[path].methods;
+        if (methods && methods.length) {
+            out[actualPath] = {};
+            for (let method of methods) {
+                out[actualPath][method] = { description: 'exists' };
+            }
+        }
+        out = {
+            ...out,
+            ...collectionToOAS(collection.paths[path], actualPath),
+        }
+    }
+
+    return out;
 }

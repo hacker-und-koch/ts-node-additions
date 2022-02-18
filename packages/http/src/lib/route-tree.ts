@@ -22,11 +22,11 @@ export class RouteTree {
             servers: [{
                 url: `http://${this.router.url}`,
             }],
-            paths: this.router
+            paths: this.router.pathsOAS
         }
     }
 
     toString() {
-        return 'Lelz';
+        return JSON.stringify(this.oas(), null, 2);
     }
 }
