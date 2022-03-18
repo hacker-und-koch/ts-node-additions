@@ -23,6 +23,7 @@
     "license": "LGPL-3.0",
     "dependencies": {
         "@hacker-und-koch/di": "0.2.1",
+        "@hacker-und-koch/type-store": "0.2.1",
         "undici": "^4.13.0"
     },
     "devDependencies": {

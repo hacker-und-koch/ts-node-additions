@@ -1,35 +1,41 @@
+import { HTTP_METHOD_HANDLERS } from '../symbols';
 
-export function Get(target: any, propertyKey: string): void {
-    target.__tna_http_method_handlers__ = {
-        ...target.__tna_http_method_handlers__ ,
-        GET: propertyKey,
+export interface MethodOptions {
+    inBody?: any;
+    outBody?: any;
+    inType?: string;
+    outType?: string;
+}
+
+function setMethodHandlers(target: any, key: string, method: string, options: MethodOptions) {
+    target[HTTP_METHOD_HANDLERS] = {
+        ...target[HTTP_METHOD_HANDLERS],
+        [method]: { key, options },
     }
 }
 
-export function Post(target: any, propertyKey: string): void {
-    target.__tna_http_method_handlers__ = {
-        ...target.__tna_http_method_handlers__ ,
-        POST: propertyKey,
+export function Get(options?: MethodOptions) {
+    return function (target: any, propertyKey: string): void {
+        setMethodHandlers(target, propertyKey, 'GET', options);
     }
 }
-
-export function Put(target: any, propertyKey: string): void {
-    target.__tna_http_method_handlers__ = {
-        ...target.__tna_http_method_handlers__ ,
-        PUT: propertyKey,
+export function Post(options?: MethodOptions) {
+    return function (target: any, propertyKey: string): void {
+        setMethodHandlers(target, propertyKey, 'POST', options);
     }
 }
-
-export function Delete(target: any, propertyKey: string): void {
-    target.__tna_http_method_handlers__ = {
-        ...target.__tna_http_method_handlers__ ,
-        DELETE: propertyKey,
+export function Put(options?: MethodOptions) {
+    return function (target: any, propertyKey: string): void {
+        setMethodHandlers(target, propertyKey, 'PUT', options);
     }
 }
-
-export function Handle(target: any, propertyKey: string): void {
-    target.__tna_http_method_handlers__ = {
-        ...target.__tna_http_method_handlers__ ,
-        ANY: propertyKey,
+export function Delete(options?: MethodOptions) {
+    return function (target: any, propertyKey: string): void {
+        setMethodHandlers(target, propertyKey, 'DELETE', options);
+    }
+}
+export function Handle(options?: MethodOptions) {
+    return function (target: any, propertyKey: string): void {
+        setMethodHandlers(target, propertyKey, 'ANY', options);
     }
 }

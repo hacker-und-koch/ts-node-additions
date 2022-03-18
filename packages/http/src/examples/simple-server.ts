@@ -5,7 +5,7 @@ import { Get, RequestHandler, Route, Router, RouterConfiguration } from '../lib'
     path: '/',
 })
 class HelloRoute extends RequestHandler {
-    @Get
+    @Get()
     async greet(): Promise<string> {
         // simple strings and objects can be returned to finish request
         return 'hello, planet!';

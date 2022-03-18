@@ -1,11 +1,14 @@
 import { Injectable, Inject, Providers, OnConfigure } from '@hacker-und-koch/di';
 import { Logger } from '@hacker-und-koch/logger';
+import { TypeStore } from '@hacker-und-koch/type-store';
+
 import { MethodNotAllowedError, NotFoundError } from './errors';
-import { RouteDecorated } from './decorators';
+import { MethodOptions, RouteDecorated } from './decorators';
 import { Default404Route } from './default-404.route';
 import { RouteOptions } from './models';
 import { RequestContext } from './request-context';
 import { pathHasVariables, evaluatePathVariables } from './util';
+import { HTTP_METHOD_HANDLERS, HTTP_ROUTE_OPTIONS } from './symbols';
 
 export interface PathsOAS {
     [path: string]: {
@@ -22,6 +25,7 @@ export class RequestHandler implements OnConfigure {
     };
 
     protected handlers: RequestHandler[] = [];
+    protected typeStore: TypeStore = new TypeStore();
 
     constructor(protected logger: Logger) { }
 
@@ -32,12 +36,12 @@ export class RequestHandler implements OnConfigure {
         }
 
         if (['GET', 'PUT', 'POST', 'DELETE'].indexOf(ctx.method) > -1) {
-            const methodKey = this.methodHandlers[ctx.method];
+            const methodKey = this.methodHandlers[ctx.method].key;
             if (methodKey && methodKey in this) {
                 return (this as any)[methodKey].apply(this, [ctx]);
             }
         } else if (this.methodHandlers.ANY) {
-            return (this as any)[this.methodHandlers.ANY].apply(this, [ctx]);
+            return (this as any)[this.methodHandlers.ANY.key].apply(this, [ctx]);
         }
 
         throw new MethodNotAllowedError();
@@ -120,11 +124,11 @@ export class RequestHandler implements OnConfigure {
     }
 
     protected get reflectedOptions(): RouteOptions {
-        return ((this as any).__proto__.constructor as RouteDecorated)?.__tna_http_route_options__;
+        return (this as any).__proto__.constructor[HTTP_ROUTE_OPTIONS];
     }
 
-    protected get methodHandlers(): { [method: string]: string } {
-        return (this as any).constructor.prototype.__tna_http_method_handlers__ || {};
+    protected get methodHandlers(): { [method: string]: {key: string, options?: MethodOptions} } {
+        return (this as any).constructor.prototype[HTTP_METHOD_HANDLERS] || {};
     }
 
     protected get methods(): string[] {

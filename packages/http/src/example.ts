@@ -26,7 +26,7 @@ import {
 })
 class SomeRoute extends RequestHandler {
     // assign handler function
-    @Get
+    @Get()
     async greet(ctx: RequestContext): Promise<string> {
         // generate arbitrary error when search params are detected
         if (ctx.hasSearch) {
@@ -46,7 +46,7 @@ class ValuesRoute extends RequestHandler {
     // create pseudo storage
     private storage = new Map<string, any>();
 
-    @Get
+    @Get()
     async readValue(ctx: RequestContext) {
         // get 'id' variable
         const id = ctx.pathVariables.get('id');
@@ -59,7 +59,7 @@ class ValuesRoute extends RequestHandler {
         throw new NotFoundError('Unknown ID');
     }
     
-    @Post
+    @Post()
     async setValue(ctx: RequestContext) {
         // get 'id' variable
         const id = ctx.pathVariables.get('id');
