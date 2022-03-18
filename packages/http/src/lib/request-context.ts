@@ -1,4 +1,5 @@
 import { Logger } from '@hacker-und-koch/logger';
+import { CheckResult, TypeStore } from '@hacker-und-koch/type-store';
 import { randomBytes } from 'crypto';
 import { IncomingMessage, ServerResponse } from 'http';
 import { URL, URLSearchParams } from 'url';
@@ -34,6 +35,10 @@ export class RequestContext {
 
     private _pathVariables: Map<string, string> = new Map<string, string>();
     private _pathLeftToEvaluate: string = undefined;
+
+    private _checkBody: any;
+    private _checkTypeStore: TypeStore;
+    private _checkResponse: { [status: number]: any };
 
     get id(): string {
         return this._id;
@@ -136,12 +141,21 @@ export class RequestContext {
     get jsonBody(): Promise<any> {
         return this.rawBody
             .then(body => {
+                let parsed: any;
                 try {
-                    return JSON.parse(body.toString('utf-8'));
+                    parsed = JSON.parse(body.toString('utf-8'));
                 } catch (err) {
                     this.logger.spam(`Failed to parse body: '${body}'`);
                     throw new InvalidRequestError('Failed to parse body as JSON');
                 }
+                if (this._checkBody) {
+                    const result = this._checkTypeStore.check(parsed, this._checkBody);
+                    if (!result.isValid) {
+                        this.logger.log('Invalid body:', result);
+                        throw new InvalidRequestError('Invalid body.');
+                    }
+                }
+                return parsed;
             });
     }
 
@@ -195,5 +209,29 @@ export class RequestContext {
 
     setHeader(name: string, value: string) {
         this._res.setHeader(name, value);
+    }
+
+    setTypeStore(store: TypeStore) {
+        this._checkTypeStore = store;
+    }
+
+    restrictBody(via: any) {
+        this._checkBody = via;
+    }
+
+    restrictResponses(via: { [status: number]: any }) {
+        this._checkResponse = via;
+    }
+
+    get responseRestrictions() {
+        return this._checkResponse;
+    }
+
+    get status() {
+        return this._res.statusCode;
+    }
+
+    checkRestrictions(body: any, dataType: any): CheckResult {
+        return this._checkTypeStore.check(body, dataType);
     }
 }

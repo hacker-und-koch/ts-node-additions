@@ -75,7 +75,9 @@ class ValuesRoute extends RequestHandler {
 
         // return value if present
         if (this.storage.has(id)) {
-            return this.storage.get(id);
+            // will reply with empty 502 if return 
+            // does not match ValueMessage
+            return { value: this.storage.get(id) };
         }
 
         throw new NotFoundError('Unknown ID');
@@ -95,10 +97,12 @@ class ValuesRoute extends RequestHandler {
 
         // get body
         const body = await ctx.jsonBody;
+        
         this.logger.log(`Setting '${id}' to`, body);
 
-        // set in pseudo storage
-        this.storage.set(id, body);
+        // note: calling .value is safe here, because 
+        //       of `body: ValueMessage` in `@Post` 
+        this.storage.set(id, body.value);
 
         // set response code
         ctx.status = 201;
@@ -165,13 +169,13 @@ class App implements OnReady {
     private undici: UndiciClient;
 
     async onReady() {
-        this.logger.log('ready' + this.router.tree);
+        this.logger.log('OAS: ' + this.router.tree);
 
         this.logger.log('Request finished:', (await this.undici.request('/hi')).statusCode);
 
         const createStatus = (await this.undici.request('/api/values/foo', {
             method: 'POST',
-            body: JSON.stringify({ lorem: 'ipsum' }),
+            body: JSON.stringify({ value: 'Lorem ipsum' }),
         })).statusCode;
 
         assertEqual(createStatus, 201);

@@ -17,7 +17,7 @@ export interface PathsOAS {
 }
 
 @Injectable()
-export class RequestHandler implements OnConfigure {
+export class RequestHandler {
 
     @Inject(Default404Route)
     protected defaultHandler: {
@@ -35,13 +35,26 @@ export class RequestHandler implements OnConfigure {
             return this.defaultHandler.handle.apply(this.defaultHandler, [ctx]);
         }
 
+        let methodKey = '';
+        let opts: MethodOptions;
         if (['GET', 'PUT', 'POST', 'DELETE'].indexOf(ctx.method) > -1) {
-            const methodKey = this.methodHandlers[ctx.method].key;
-            if (methodKey && methodKey in this) {
-                return (this as any)[methodKey].apply(this, [ctx]);
-            }
+            methodKey = this.methodHandlers[ctx.method]?.key;
+            opts =  this.methodHandlers[ctx.method]?.options;
+
         } else if (this.methodHandlers.ANY) {
-            return (this as any)[this.methodHandlers.ANY.key].apply(this, [ctx]);
+            methodKey = this.methodHandlers.ANY.key;
+            opts =  this.methodHandlers.ANY?.options;
+        }
+        
+        if (methodKey && methodKey in this) {
+            ctx.setTypeStore(this.typeStore);
+            if (opts.body) {
+                ctx.restrictBody(opts.body);
+            }
+            if (opts.responses) {
+                ctx.restrictResponses(opts.responses);
+            }
+            return (this as any)[methodKey].apply(this, [ctx]);
         }
 
         throw new MethodNotAllowedError();
@@ -161,9 +174,6 @@ export class RequestHandler implements OnConfigure {
         });
     }
 
-    onConfigure() {
-    }
-
     get allHandlers(): PathCollection {
         return {
             methods: this.methodHandlers,
@@ -184,7 +194,7 @@ export class RequestHandler implements OnConfigure {
         return {
             // ...this.typeStore.schemas,
             ...this.handlers.reduce((acc, cur) => {
-                
+
                 return {
                     ...acc,
                     ...cur.schemas,

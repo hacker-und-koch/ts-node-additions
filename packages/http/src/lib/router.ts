@@ -102,6 +102,21 @@ export class Router extends RequestHandler implements OnConfigure, OnInit {
             }
             return;
         }
+        
+        const responseRestrictions = context.responseRestrictions;
+        const expectedStatus = context.status || 200;
+        const restriction = responseRestrictions[expectedStatus];
+
+        if (restriction && typeof restriction !== 'string') {
+            const checkResult = context.checkRestrictions(body, restriction);
+            if (!checkResult.isValid) {
+                this.logger.warn(`request ${context.id} ended with invalid DataType for status ${expectedStatus}!`, checkResult);
+
+                context.status = 502;
+                res.end();
+                return;
+            }
+        }
 
         if (body !== undefined) {
             if (typeof body === 'object' && !Buffer.isBuffer(body)) {

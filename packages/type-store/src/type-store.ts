@@ -3,13 +3,13 @@ import {
     INTERNAL_NAME_KEY,
 } from './decorators';
 
-interface FaultyKey {
+export interface FaultyKey {
     key: string;
     has: any;
     wants: any;
 }
 
-interface CheckResult {
+export interface CheckResult {
     isValid: boolean;
     faultyKeys?: FaultyKey[];
 }
