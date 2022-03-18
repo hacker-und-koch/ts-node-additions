@@ -1,4 +1,3 @@
-import { disconnect } from 'process';
 import {
     INTERNAL_TYPE_KEY,
     INTERNAL_NAME_KEY,
@@ -17,42 +16,118 @@ interface CheckResult {
 
 interface InnerStore {
     [name: string]: {
-        type: any, mandatory?: boolean
+        [INTERNAL_TYPE_KEY]: {
+            [key: string]: {
+                type: any;
+                mandatory?: boolean;
+            }
+        }
     }
+}
+
+const BUILTINS = ['string', 'number', 'bigint', 'boolean', 'symbol', 'undefined', 'object', 'function'];
+
+function isBuiltInType(type: string) {
+    return BUILTINS.indexOf(type) > -1;
 }
 
 export class TypeStore {
     private store: InnerStore = {};
 
-    add(dataType: any) {
-        this.store[dataType[INTERNAL_NAME_KEY]] = dataType[INTERNAL_TYPE_KEY];
-        console.log(this.store);
+    get storage() {
+        return this.store;
     }
 
-    check(input: any, dataType: any): CheckResult {
+    add(dataType: any) {
+        this.store[dataType[INTERNAL_NAME_KEY]] = dataType;
+        const addition = dataType[INTERNAL_TYPE_KEY];
+        for (let key in addition) {
+            // console.log(key, addition);
+            if (isBuiltInType(addition[key].type.name.toLowerCase())) continue;
+
+            addition[key] = {
+                $ref: addition[key].type.name,
+                raw: dataType,
+            };
+        }
+        // console.log('>> STORE >>', this.store);
+    }
+
+    get schemas() {
+        const out: any = {};
+        for (let name in this.store) {
+            out[name] = {
+                type: 'object',
+                properties: {} as any,
+            }
+
+            for (let key in this.store[name][INTERNAL_TYPE_KEY]) {
+                const prop = this.store[name][INTERNAL_TYPE_KEY][key];
+                if ("$ref" in prop) {
+                    out[name].properties[key] = {
+                        $ref: `#/components/schemas/${(prop as any).$ref}`
+                    }
+                    continue;
+                }
+                // console.log('?????', prop);
+                const storeType = prop.type.name.toLowerCase();
+                out[name].properties[key] = {
+                    type: (storeType === 'bigint') ? 'integer' : storeType,
+                }
+            }
+        }
+        return out;
+    }
+
+    check(input: any, dataType: any, subOf?: string): CheckResult {
         const failures: FaultyKey[] = [];
         const didEvaluate: string[] = [];
+
         for (let key in dataType[INTERNAL_TYPE_KEY]) {
             const inputVal = input[key];
             const has = typeof inputVal;
+
             const info = dataType[INTERNAL_TYPE_KEY][key];
+            if (info.$ref) {
+                const ref = this.store[info.$ref];
+                if (!inputVal) {
+                    failures.push({
+                        key: `${subOf ? subOf + '.' : ''}${key}`,
+                        has,
+                        wants: info.$ref,
+                    })
+                    continue;
+                }
+                const result = this.check(inputVal, ref, `${subOf ? subOf + '/' : ''}${key}`);
+                if (!result.isValid) {
+                    for (let fail of result.faultyKeys) {
+                        failures.push(fail);
+                    }
+                }
+                didEvaluate.push(key);
+                continue;
+            }
+
             const wants = info.type.name?.toLowerCase();
-            //            console.log(inputVal, has, wants);
+
             if (inputVal === undefined) {
                 if (info.mandatory) {
                     failures.push({
-                        key, wants, has
+                        key: `${subOf ? subOf + '.' : ''}${key}`,
+                        has,
+                        wants,
                     });
                 }
-            } else if (!(wants in ['object', 'function'])) {
+            } else if (['object', 'function'].indexOf(wants) < 0) {
                 if (has !== wants) {
                     failures.push({
-                        key, wants, has
+                        key: `${subOf ? subOf + '.' : ''}${key}`,
+                        wants,
+                        has,
                     })
                 }
             } else {
-                // dunno yet :|
-                // somehow gotta do recursive stuffs
+                console.log('can i has?!');
             }
             didEvaluate.push(key);
 
@@ -68,7 +143,6 @@ export class TypeStore {
                 wants: 'undefined',
             });
         }
-
         return {
             isValid: !failures.length,
             faultyKeys: failures.length ? failures : undefined,

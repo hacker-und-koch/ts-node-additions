@@ -35,14 +35,7 @@ export function Mandatory(): any {
         descriptor: PropertyDescriptor,
 
     ): any {
-        const ownType = Reflect.getMetadata("design:type", target, propertyKey);
-
-        if (!target.constructor[INTERNAL_TYPE_KEY]) {
-            target.constructor[INTERNAL_TYPE_KEY] = {};
-        }
-        target.constructor[INTERNAL_TYPE_KEY][propertyKey] = {
-            type: ownType,
-            mandatory: true,
-        }
+        Optional()(target, propertyKey, descriptor);
+        target.constructor[INTERNAL_TYPE_KEY][propertyKey].mandatory = true;
     }
 }
