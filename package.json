@@ -22,6 +22,7 @@
     "packages/util",
     "packages/di",
     "packages/eventbus",
+    "packages/ensure-type",
     "packages/http"
   ]
 }
