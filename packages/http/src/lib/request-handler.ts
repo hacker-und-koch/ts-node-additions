@@ -117,6 +117,23 @@ export class RequestHandler implements OnConfigure {
             this.logger.spam(`Adding ${instance.logger.className} to ${this.logger.className}`);
             this.use(instance);
         }
+
+        for (let method in this.methodHandlers) {
+            const opts = this.methodHandlers[method].options;
+            if (opts) {
+                if (opts.body) {
+                    this.typeStore.add(opts.body);
+                }
+                if (opts.responses) {
+                    for (let status in opts.responses) {
+                        const type = opts.responses[status];
+                        if (typeof type !== 'string') {
+                            this.typeStore.add(type);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     protected get handledPath() {
@@ -127,7 +144,7 @@ export class RequestHandler implements OnConfigure {
         return (this as any).__proto__.constructor[HTTP_ROUTE_OPTIONS];
     }
 
-    protected get methodHandlers(): { [method: string]: {key: string, options?: MethodOptions} } {
+    protected get methodHandlers(): { [method: string]: { key: string, options?: MethodOptions } } {
         return (this as any).constructor.prototype[HTTP_METHOD_HANDLERS] || {};
     }
 
@@ -145,12 +162,11 @@ export class RequestHandler implements OnConfigure {
     }
 
     onConfigure() {
-
     }
 
     get allHandlers(): PathCollection {
         return {
-            methods: Object.keys(this.methodHandlers),
+            methods: this.methodHandlers,
             paths: this.handlers.reduce((acc, handler) => {
                 return {
                     ...acc,
@@ -163,10 +179,23 @@ export class RequestHandler implements OnConfigure {
     get pathsOAS(): PathsOAS {
         return collectionToOAS(this.allHandlers);
     }
+
+    get schemas(): { [key: string]: any } {
+        return {
+            // ...this.typeStore.schemas,
+            ...this.handlers.reduce((acc, cur) => {
+                
+                return {
+                    ...acc,
+                    ...cur.schemas,
+                };
+            }, this.typeStore.schemas)
+        };
+    }
 }
 
 interface PathCollection {
-    methods: string[];
+    methods: { [method: string]: { key: string, options?: MethodOptions } };
     paths: { [key: string]: PathCollection };
 }
 
@@ -175,10 +204,53 @@ function collectionToOAS(collection: PathCollection, prefix: string = '') {
     for (let path in collection.paths) {
         const actualPath = `${prefix}${path}`;
         const methods = collection.paths[path].methods;
-        if (methods && methods.length) {
+        if (methods && Object.keys(methods).length) {
             out[actualPath] = {};
-            for (let method of methods) {
-                out[actualPath][method] = { description: 'exists' };
+            for (let method in methods) {
+                const opts = methods[method].options;
+                if (opts) {
+                    const newEntry: any = out[actualPath][method] = {
+                        description: opts.description,
+                    };
+                    if (opts.responses) {
+
+                        const responses = newEntry.responses = {} as any;
+                        for (let status in opts.responses) {
+                            if (typeof opts.responses[status] === 'string') {
+                                responses[String(status)] = {
+                                    content: {
+                                        [opts.responses[status]]: {
+                                            schema: { type: 'string' }
+                                        }
+                                    }
+                                }
+
+                            } else {
+                                responses[String(status)] = {
+                                    content: {
+                                        ['application/json']: {
+                                            schema: {
+                                                $ref: `#/components/schemas/${opts.responses[status].name}`,
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if (opts.body) {
+                        const body = newEntry.requestBody = {} as any;
+                        body.content = {
+                            'application/json': {
+                                schema: {
+                                    $ref: `#/components/schemas/${(opts.body as any).name}`,
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    out[actualPath][method] = { description: 'exists' };
+                }
             }
         }
         out = {

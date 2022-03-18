@@ -1,10 +1,11 @@
 import { HTTP_METHOD_HANDLERS } from '../symbols';
 
 export interface MethodOptions {
-    inBody?: any;
-    outBody?: any;
-    inType?: string;
-    outType?: string;
+    description?: string;
+    body?: any;
+    responses?: {
+        [key: number]: string | any;
+    }
 }
 
 function setMethodHandlers(target: any, key: string, method: string, options: MethodOptions) {

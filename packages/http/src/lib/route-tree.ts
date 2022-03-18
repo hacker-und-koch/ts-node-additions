@@ -22,7 +22,12 @@ export class RouteTree {
             servers: [{
                 url: `http://${this.router.url}`,
             }],
-            paths: this.router.pathsOAS
+            paths: this.router.pathsOAS,
+            components: {
+                schemas: {
+                    ...this.router.schemas,
+                }
+            }
         }
     }
 

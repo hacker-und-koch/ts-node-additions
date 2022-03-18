@@ -1,5 +1,6 @@
 import { Application, bootstrap, OnReady, Injectable, config, Inject } from '@hacker-und-koch/di';
 import { Logger } from '@hacker-und-koch/logger';
+import { DataType, Mandatory } from '@hacker-und-koch/type-store';
 import { equal as assertEqual } from 'assert/strict';
 
 import {
@@ -26,7 +27,12 @@ import {
 })
 class SomeRoute extends RequestHandler {
     // assign handler function
-    @Get()
+    @Get({
+        description: 'Says hello.',
+        responses: {
+            200: 'text/html'
+        }
+    })
     async greet(ctx: RequestContext): Promise<string> {
         // generate arbitrary error when search params are detected
         if (ctx.hasSearch) {
@@ -39,6 +45,18 @@ class SomeRoute extends RequestHandler {
     }
 }
 
+@DataType()
+class ValueMessage {
+    @Mandatory()
+    value: string;
+}
+
+@DataType()
+class SuccessMessage {
+    @Mandatory()
+    success: boolean;
+}
+
 @Route({
     path: '/values/{id}',
 })
@@ -46,7 +64,11 @@ class ValuesRoute extends RequestHandler {
     // create pseudo storage
     private storage = new Map<string, any>();
 
-    @Get()
+    @Get({
+        responses: {
+            200: ValueMessage,
+        }
+    })
     async readValue(ctx: RequestContext) {
         // get 'id' variable
         const id = ctx.pathVariables.get('id');
@@ -58,8 +80,13 @@ class ValuesRoute extends RequestHandler {
 
         throw new NotFoundError('Unknown ID');
     }
-    
-    @Post()
+
+    @Post({
+        body: ValueMessage,
+        responses: {
+            201: SuccessMessage,
+        },
+    })
     async setValue(ctx: RequestContext) {
         // get 'id' variable
         const id = ctx.pathVariables.get('id');
