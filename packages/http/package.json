@@ -21,7 +21,7 @@
     "license": "LGPL-3.0",
     "dependencies": {
         "@hacker-und-koch/di": "0.2.1",
-        "undici": "^4.13.0"
+        "undici": "^5.5.1"
     },
     "devDependencies": {
         "@types/jasmine": "^3.5.5",
