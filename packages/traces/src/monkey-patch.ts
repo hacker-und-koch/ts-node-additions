@@ -1,3 +1,6 @@
 import { ErrorParser }  from './error-parser';
 
-ErrorParser.monkeyPatchGlobalError();
+
+if (!process.env.NO_TRACE_MAPPING) {
+    ErrorParser.monkeyPatchGlobalError();
+}
