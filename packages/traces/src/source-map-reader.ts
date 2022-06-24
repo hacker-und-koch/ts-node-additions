@@ -7,7 +7,8 @@ import { SourceMap } from './models';
 import { resolve as resolvePath, join as joinPath, parse as parsePath, ParsedPath } from 'path';
 import { readFileSync } from 'fs';
 
-const CWD = process.cwd();
+// const CWD = process.cwd();
+// const HOME = process.env.HOME;
 const CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
 
 const IDX_MAP = [
@@ -45,7 +46,6 @@ export class SourceMapReader {
             [filePath]: readFileSync(joinPath(__dirname, filePath)).toString().split('\n'),
         }), {});
 
-        // console.log(this.sourceMap);
         let lineCarry = 0n;
         let colCarry = 0n;
         for (let segment of this.sourceMap.mappings.split(';')) {
@@ -88,16 +88,21 @@ export class SourceMapReader {
                         Number((mappingsOfLine[relevantIndex + 2] || {}).codeColumn || '0') || undefined
                     );
             }
-            const sourcePath = (fullPath.indexOf(CWD) === 0) ? `.${fullPath.slice(CWD.length)}` : fullPath;
+
+            // print relative paths:
+            // const sourcePath = (fullPath.indexOf(CWD) === 0) ? `.${fullPath.slice(CWD.length)}` : fullPath;
+            // print relative from home path:
+            // const sourcePath = (fullPath.indexOf(HOME) === 0) ? `~${fullPath.slice(HOME.length)}` : fullPath;
+            
+            // print full path:
+            const sourcePath = fullPath;
+
             const printableLine = relevantMapping.sourceLine + 1n;
             const printableColumn = relevantMapping.sourceColumn + 1n;
             return `    at ${sourceContent} (${sourcePath}:${printableLine}:${printableColumn})`;
         } else {
 
             // fallback. maybe add sanity check
-
-
-
 
             return;
         }
@@ -120,7 +125,7 @@ export class SourceMapReader {
         contDepth: bigint = 0n
     ): DecodedNumbers {
         const [first, ...rest] = [...chunk];
-        // console.log(rest);
+
         const tail = rest.length ? rest.join('') : '';
         const idxInChars = CHARS.indexOf(first);
         const hasContinuationBit = !!(idxInChars & 32);

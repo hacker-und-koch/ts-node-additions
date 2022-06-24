@@ -1,9 +1,10 @@
 import { readFileSync } from 'fs';
-import { resolve as resolvePath, join as joinPath, parse as parsePath, ParsedPath } from 'path';
+import { resolve as resolvePath, parse as parsePath } from 'path';
 
 import { SourceMapReader } from './source-map-reader';
 
 const mappingUrlReference = '//# sourceMappingURL=';
+const NodeError = Error;
 
 export class ErrorParser {
     private sourceCache: { [jsFile: string]: SourceMapReader } = {};
@@ -46,5 +47,15 @@ export class ErrorParser {
             console.error(error);
             process.exit(1);
         });
+    }
+    
+    static monkeyPatchGlobalError() {
+        const parser = new ErrorParser();
+        global.Error = class Error extends NodeError {
+            constructor(public message: string) {
+                super(message);
+                this.stack = parser.map(this).stack;
+            }
+        } as any;
     }
 }

@@ -1,9 +1,12 @@
-import { SourceMapReader } from './source-map-reader';
-import { join as joinPath } from 'path';
-import { doesNotWork } from './sub-example';
-import { ErrorParser } from './error-parser';
+import './monkey-patch';
 
-ErrorParser.registerErrorHandling();
+import { doesNotWork } from './sub-example';
+
+try {
+    callingExternalFailure();
+} catch(e) {
+    console.log('Did catch:', e);
+}
 
 callingExternalFailure();
 
