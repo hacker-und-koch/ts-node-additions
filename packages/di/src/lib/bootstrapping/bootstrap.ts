@@ -1,4 +1,3 @@
-import '@hacker-und-koch/traces';
 import { GetOptConfiguration } from '@hacker-und-koch/getopt';
 import { Logger, Loglevel } from '@hacker-und-koch/logger';
 
