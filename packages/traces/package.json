@@ -1,0 +1,28 @@
+{
+    "name": "@hacker-und-koch/traces",
+    "version": "0.2.1",
+    "description": "",
+    "main": "bin/index.js",
+    "types": "declarations/index.d.ts",
+    "scripts": {
+        "build": "tsc",
+        "build:watch": "tsc --watch",
+        "test": "jasmine",
+        "test:watch": "npx nodemon --exec jasmine",
+        "start": "node bin/example.js",
+        "start:watch": "npx nodemon --exec node bin/example.js",
+        "clean": "rm -r ./bin ./declarations",
+        "clean:full": "rm -r ./bin ./declarations ./node_modules"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git@github.com:hacker-und-koch/ts-node-additions.git"
+    },
+    "license": "LGPL-3.0",
+    "devDependencies": {
+        "@types/jasmine": "^3.5.5",
+        "@types/node": "16",
+        "jasmine": "^3.5.0",
+        "typescript": "^3.7.5"
+    }
+}

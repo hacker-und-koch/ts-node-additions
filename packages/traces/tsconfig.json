@@ -1,0 +1,24 @@
+{
+    "compilerOptions": {
+        "declarationDir": "declarations",
+        "experimentalDecorators": true,
+        "emitDecoratorMetadata": true,
+        "noImplicitAny": true,
+        "outDir": "bin/",
+        "declaration": true,
+        "baseUrl": "bin/",
+        "target": "es2020",
+        "module": "CommonJS",
+        "lib": [
+            "es2015"
+        ],
+        "sourceMap": true
+    },
+    "include": [
+        "src/**/*.ts"
+    ],
+    "exclude": [
+        "node_modules"
+    ],
+    "compileOnSave": true
+}

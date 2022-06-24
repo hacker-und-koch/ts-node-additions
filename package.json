@@ -17,6 +17,7 @@
     "install": "node .run.js build && node .run.js test"
   },
   "workspaces": [
+    "packages/traces",
     "packages/getopt",
     "packages/logger",
     "packages/util",
