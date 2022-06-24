@@ -28,6 +28,7 @@
     "dependencies": {
         "@hacker-und-koch/getopt": "0.2.1",
         "@hacker-und-koch/logger": "0.2.1",
+        "@hacker-und-koch/traces": "0.2.1",
         "@hacker-und-koch/util": "0.2.1",
         "reflect-metadata": "^0.1.13"
     },
