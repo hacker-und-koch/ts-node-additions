@@ -1,6 +1,8 @@
-import { Providers } from './providers';
+import '@hacker-und-koch/traces';
 import { GetOptConfiguration } from '@hacker-und-koch/getopt';
 import { Logger, Loglevel } from '@hacker-und-koch/logger';
+
+import { Providers } from './providers';
 
 export interface BootstrapOptions {
     log?: Loglevel | { [className: string]: Loglevel };
@@ -48,7 +50,7 @@ export async function bootstrap(target: any, options?: BootstrapOptions): Promis
         di_logger.info(e);
         process.exit(1);
     }
-    
+
     providers.announceInstanceCreation();
 
     await providers.configureInstances()
