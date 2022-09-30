@@ -1,6 +1,7 @@
 ## Own
 bin/
 declarations/
+.DS_STORE
 
 ## From GitHub:
 *.log

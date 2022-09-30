@@ -5,7 +5,8 @@
 
 import { SourceMap } from './models';
 import { resolve as resolvePath, join as joinPath, parse as parsePath, ParsedPath } from 'path';
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
+import { ok } from 'assert';
 
 // const CWD = process.cwd();
 // const HOME = process.env.HOME;
@@ -17,6 +18,7 @@ const IDX_MAP = [
     "sourceLine",
     "sourceColumn",
     "sourceName",
+    "symbolRef"
 ];
 
 interface Mapping {
@@ -25,6 +27,8 @@ interface Mapping {
     sourceLine?: bigint;
     sourceColumn?: bigint;
     sourceName?: bigint;
+    orig?: string;
+    symbolRef?: bigint;
 }
 
 declare type DecodedNumbers = bigint[];
@@ -38,51 +42,75 @@ export class SourceMapReader {
 
     constructor(private mapPath: string) {
         this.parsedMapPath = parsePath(mapPath);
-        this.sourceMap = JSON.parse(readFileSync(this.mapPath).toString('utf8'));
-        this.codeFile = readFileSync(joinPath(this.parsedMapPath.dir, this.sourceMap.file)).toString().split('\n');
+        if (existsSync(this.mapPath)) {
+            this.sourceMap = JSON.parse(readFileSync(this.mapPath).toString('utf8'));
+        } else {
+            console.warn('Failed to load sourceMap for', mapPath);
+        }
 
-        this.sourceFiles = this.sourceMap.sources.reduce((acc, filePath) => ({
-            ...acc,
-            [filePath]: readFileSync(joinPath(__dirname, filePath)).toString().split('\n'),
-        }), {});
+        const codeFilePath = joinPath(this.parsedMapPath.dir, this.sourceMap.file);
+        if (existsSync(codeFilePath)) {
+            this.codeFile = readFileSync(joinPath(this.parsedMapPath.dir, this.sourceMap.file)).toString().split('\n');
+        } else {
+            console.warn('Failed to load code for', mapPath, 'and', this.sourceMap.file);
+        }
 
-        let lineCarry = 0n;
+        // const sourceFilePath = joinPath(__dirname, filePath);
+        this.sourceFiles = this.sourceMap.sources.reduce((acc, filePath) => {
+            const sourceFilePath = joinPath(this.parsedMapPath.dir, filePath);
+            if (!existsSync(sourceFilePath)) {
+                console.warn('Failed to find source file:', sourceFilePath)
+            }
+            return {
+                ...acc,
+                [filePath]: existsSync(sourceFilePath) ? readFileSync(sourceFilePath).toString().split('\n') : [],
+            }
+        }, {});
+
         let colCarry = 0n;
+        let lineCarry = 0n;
         for (let segment of this.sourceMap.mappings.split(';')) {
+            // lineCarry = 0n;
             const list: Mapping[] = [];
+
             let relativeTo: Mapping = { codeColumn: 0n, sourceLine: lineCarry, sourceColumn: colCarry };
             for (let vlq of segment.split(',')) {
                 const chunk = SourceMapReader.parseChunk(vlq, relativeTo);
                 list.push(chunk);
                 relativeTo = chunk;
+                colCarry = relativeTo.sourceColumn;
+                lineCarry = relativeTo.sourceLine;
             }
             this.mappings.push(list);
-            lineCarry = relativeTo.sourceLine;
-            colCarry = relativeTo.sourceColumn;
         }
+
+        // console.log(this.mappings);
     }
 
-    map(line: bigint, column: bigint): string {
+    map(line: bigint, column: bigint, lineStart?: string): string {
 
         const mappingsOfLine = this.mappings[Number(line)];
         const relevantMapping = mappingsOfLine
-            .filter(map => map.codeColumn <= column)
-            .reverse()[0];
+            .find(map => map.codeColumn <= column);
+        // .sort((cur, prev) => Number(prev) - Number(cur))[0];
 
         if (relevantMapping) {
             const relevantIndex = mappingsOfLine.indexOf(relevantMapping);
             const sourceName = this.sourceMap.sources[
-                Number(relevantMapping.sourceFileIdx)
+                Number(relevantMapping.sourceFileIdx || 0n)
             ];
+
+            ok(sourceName, 'Expected reference to existing source file');
+
             const fullPath = joinPath(this.parsedMapPath.dir, sourceName);
 
-            let sourceContent = this.sourceFiles[sourceName][Number(relevantMapping.sourceLine)]
+            let sourceContent = this.sourceFiles[sourceName][Number(relevantMapping.sourceLine || 0)]
                 .slice(
                     Number(relevantMapping.sourceColumn),
                     Number((mappingsOfLine[relevantIndex + 1] || {}).codeColumn || '0') || undefined
                 );
             if (sourceContent === 'new ') {
-                sourceContent = this.sourceFiles[sourceName][Number(relevantMapping.sourceLine)]
+                sourceContent = this.sourceFiles[sourceName][Number(relevantMapping.sourceLine || 0)]
                     .slice(
                         Number(relevantMapping.sourceColumn),
                         Number((mappingsOfLine[relevantIndex + 2] || {}).codeColumn || '0') || undefined
@@ -93,15 +121,19 @@ export class SourceMapReader {
             // const sourcePath = (fullPath.indexOf(CWD) === 0) ? `.${fullPath.slice(CWD.length)}` : fullPath;
             // print relative from home path:
             // const sourcePath = (fullPath.indexOf(HOME) === 0) ? `~${fullPath.slice(HOME.length)}` : fullPath;
-            
+
             // print full path:
             const sourcePath = fullPath;
 
-            const printableLine = relevantMapping.sourceLine + 1n;
-            const printableColumn = relevantMapping.sourceColumn + 1n;
-            return `    at ${sourceContent} (${sourcePath}:${printableLine}:${printableColumn})`;
-        } else {
+            const printableLine = BigInt(relevantMapping.sourceLine || 0) + 1n;
+            const printableColumn = BigInt(relevantMapping.sourceColumn || 0) + 1n;
 
+            let beginning = lineStart;
+            if (relevantMapping.symbolRef) {
+                beginning = `    at ${this.sourceMap.names[Number(relevantMapping.symbolRef)]}`;
+            }
+            return `${beginning} (${sourcePath}:${printableLine}:${printableColumn})`;
+        } else {
             // fallback. maybe add sanity check
 
             return;
@@ -109,13 +141,16 @@ export class SourceMapReader {
     }
     static parseChunk(chunk: string, relativeTo?: Mapping): Mapping {
         const nums = SourceMapReader.b64ToInts(chunk);
+        return nums.reduce((acc, num, idx) => {
+            const currentKey = IDX_MAP[idx] as keyof Mapping;
 
-        return nums.reduce((acc, num, idx) => ({
-            ...acc,
-            [IDX_MAP[idx]]:
-                num +
-                (relativeTo ? (relativeTo[IDX_MAP[idx] as keyof Mapping] || 0n) : 0n),
-        }), {} as any);
+            return {
+                ...acc,
+                [IDX_MAP[idx]]:
+                    num
+                    + BigInt(relativeTo ? (relativeTo[currentKey] || 0) : 0),
+            }
+        }, { orig: chunk } as any);
     }
 
     static b64ToInts(
@@ -132,6 +167,7 @@ export class SourceMapReader {
         const truncated = BigInt(idxInChars & 31);
         const continuationShifted = (truncated << (5n * contDepth));
         const withAccumulator = continuationShifted + acc;
+
         if (hasContinuationBit && tail) {
             if (!tail) {
                 console.warn('No tail, but continuation bit?!');
@@ -139,11 +175,13 @@ export class SourceMapReader {
             }
             return SourceMapReader.b64ToInts(tail, decoded, withAccumulator, contDepth + 1n);
         }
-        const negMult = (withAccumulator & 1n) ? -1n : 1n;
-        const num: bigint = BigInt(withAccumulator >> 1n) * negMult;
+        const negMult = (Number(withAccumulator) & 1) ? -1 : 1;
+        const num: bigint = BigInt((Number(withAccumulator) >>> 1) * negMult);
+
         if (tail.length === 0) {
             return [...decoded, num];
         }
+
         return SourceMapReader.b64ToInts(tail, [...decoded, num], 0n, 0n);
     }
 }

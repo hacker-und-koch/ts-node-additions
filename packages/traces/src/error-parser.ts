@@ -8,12 +8,15 @@ const NodeError = Error;
 
 export class ErrorParser {
     private sourceCache: { [jsFile: string]: SourceMapReader } = {};
-    map(error: Error): Error {
+    modifyStack(error: Error): Error {
         error.stack = error.stack.split('\n').map(line => {
-            if (line.indexOf("    at ") !== 0) {
+            const origin = /    at [^ ]+/.exec(line);
+            if (!origin) {
                 return line;
             }
 
+            const modifyFromPosition = String(origin).length;
+            const keepAsIsPart = line.substring(0, modifyFromPosition);
             const result = /\((\/[^/]+)+\/[^/]+\.js:[0-9]+:[0-9]+\)$/.exec(line);
             if (!result) {
                 return line;
@@ -33,7 +36,12 @@ export class ErrorParser {
                 this.sourceCache[codeFile] = new SourceMapReader(fullPath);
             }
             const reader = this.sourceCache[codeFile];
-            return reader.map(BigInt(codeLine) - 1n, BigInt(codeColumn) - 1n);
+            try {
+                return reader.map(BigInt(codeLine) - 1n, BigInt(codeColumn) - 1n, keepAsIsPart);
+            } catch (e) {
+                console.error('Failed to map sourcemaps:', e);
+                return line;
+            }
 
         }).join('\r\n');
 
@@ -43,19 +51,23 @@ export class ErrorParser {
     static registerErrorHandling() {
         const parser = new ErrorParser();
         process.on('uncaughtException', (error) => {
-            error = parser.map(error);
+            error = parser.modifyStack(error);
             console.error(error);
             process.exit(1);
         });
     }
-    
+
     static monkeyPatchGlobalError() {
         const parser = new ErrorParser();
-        global.Error = class Error extends NodeError {
+        class Error extends NodeError {
             constructor(public message: string) {
                 super(message);
-                this.stack = parser.map(this).stack;
+                this.stack = parser.modifyStack(this).stack;
             }
-        } as any;
+        }
+
+        if (global.Error === NodeError) {
+            global.Error = Error as any;
+        }
     }
 }
